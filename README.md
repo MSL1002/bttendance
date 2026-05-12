@@ -103,9 +103,9 @@ pip install -r requirements.txt
 
 The `requirements.txt` should contain:
 ```
-Flask==2.3.0
-mysql-connector-python==8.0.33
-python-dotenv==1.0.0
+Flask
+mysql-connector-python
+python-dotenv
 ```
 
 #### Step 4: Install MySQL Database
