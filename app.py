@@ -7,14 +7,17 @@ app = Flask(__name__)
 def handle_login():
     if request.method == 'POST':
         try:
-            fName = request.args.get('fName')
-            lName = request.args.get('lName')
-            id = request.args.get('id')
-            BackendSQL.insert_into_db(fName, lName, id)
-        except Exception as e:
+            rfid = request.args.get('rfid')
+            local = request.args.get('location')
+            #TODO:
+            # check if rfid exists in db, if not set status as "unknown_card"
+            status = BackendSQL.log_attendance(rfid, local)
+        except Exception:
             return 'Scan err', 404
-        finally:
-            return 'Scan Success', 201
+        if(status):
+            return 'logging error', 404 
+        else:
+            return 'Success', 201
     return 'Scan err', 404
 
 @app.route("/get-user", methods=['GET'])
@@ -42,10 +45,12 @@ def create():
             BackendSQL.insert_into_db(rfid, fName, lName, id)
         except Exception as e:
             return e, 404
-        finally:
-            return 'Input Success', 201
+        return 'Input Success', 201
     return 'Error', 404
 
 @app.route("/test", methods=['GET'])
 def test():
     return "Backend is running."
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

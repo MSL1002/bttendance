@@ -1,12 +1,37 @@
 import mysql.connector
+import datetime
+import json
 
-config = {
-    'user': 'root',
-    'password': 'admin',
-    'host': '127.0.0.1',
-    'database': 'bttendance',
-    'raise_on_warnings': True
-}
+try:
+    with open("config.json") as f:
+        env = json.load(f)
+except json.decoder.JSONDecodeError as e:
+    print("ERROR:\nPlease set up \'config.json\', then try again.")
+    exit()
+
+def log_attendance(rfid, location):
+    query = ("INSERT INTO scans "
+            "(rfid_uid, timestamp, location)"
+            "VALUES(%s, %s, %s)"
+            )
+    data_vals = (rfid, datetime.datetime.now(), location)
+
+    try:
+        cnx = mysql.connector.connect(env)
+        cursor = cnx.cursor()
+        cursor.execute(query, data_vals)
+
+        cnx.commit()
+
+        print("attendance log success.")
+
+        cursor.close()
+        cnx.close()
+        
+    except mysql.connector.Error as err:
+        print("Insert failed.")
+        print(err)
+        return err
 
 def insert_into_db(rfid, fName, lName, id):
     add_student = ("INSERT INTO users "
@@ -14,7 +39,7 @@ def insert_into_db(rfid, fName, lName, id):
                 "VALUES (%s, %s, %s, %s)")
     data_student = (rfid, fName, lName, id)
     try:
-        cnx = mysql.connector.connect(**config)
+        cnx = mysql.connector.connect(env)
         cursor = cnx.cursor()
         cursor.execute(add_student, data_student)
 
@@ -36,7 +61,7 @@ def get_from_db(id):
     get_student = "SELECT * FROM users WHERE student_id = %s"
     data = (id, )
     try:
-        cnx = mysql.connector.connect(**config)
+        cnx = mysql.connector.connect(env)
         cursor = cnx.cursor()
         cursor.execute(get_student, data)
 
