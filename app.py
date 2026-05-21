@@ -12,7 +12,9 @@ def handle_login():
             #TODO:
             # check if rfid exists in db, if not set status as "unknown_card"
             status = BackendSQL.log_attendance(rfid, local)
-        except Exception:
+        except Exception as e:
+            
+            print(e)
             return 'Scan err', 404
         if(status):
             return 'logging error', 404 

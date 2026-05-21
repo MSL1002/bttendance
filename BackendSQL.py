@@ -7,6 +7,7 @@ try:
         env = json.load(f)
 except json.decoder.JSONDecodeError as e:
     print("ERROR:\nPlease set up \'config.json\', then try again.")
+    print(e)
     exit()
 
 def log_attendance(rfid, location):
@@ -17,7 +18,7 @@ def log_attendance(rfid, location):
     data_vals = (rfid, datetime.datetime.now(), location)
 
     try:
-        cnx = mysql.connector.connect(env)
+        cnx = mysql.connector.connect(**env)
         cursor = cnx.cursor()
         cursor.execute(query, data_vals)
 
@@ -39,7 +40,7 @@ def insert_into_db(rfid, fName, lName, id):
                 "VALUES (%s, %s, %s, %s)")
     data_student = (rfid, fName, lName, id)
     try:
-        cnx = mysql.connector.connect(env)
+        cnx = mysql.connector.connect(**env)
         cursor = cnx.cursor()
         cursor.execute(add_student, data_student)
 
@@ -61,7 +62,7 @@ def get_from_db(id):
     get_student = "SELECT * FROM users WHERE student_id = %s"
     data = (id, )
     try:
-        cnx = mysql.connector.connect(env)
+        cnx = mysql.connector.connect(**env)
         cursor = cnx.cursor()
         cursor.execute(get_student, data)
 

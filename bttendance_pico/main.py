@@ -43,11 +43,11 @@ wlan.connect(SSID, PASSWORD)
 
 while not wlan.isconnected():
     print('Attempting to Connect to WiFi...')
-    Pin("LED", Pin.OUT).value(1);
+    Pin("LED", Pin.OUT).value(1)
     time.sleep(1)
 
 print('Connected! IP:', wlan.ifconfig()[0])
-Pin("LED", Pin.OUT).value(0);
+Pin("LED", Pin.OUT).value(0)
 
 print("Awaiting ID")
 print("")
@@ -71,9 +71,9 @@ while True:
 
             try:
                 try_connection()
-                Pin("LED", Pin.OUT).value(1);
+                Pin("LED", Pin.OUT).value(1)
                 time.sleep(1)
-                Pin("LED", Pin.OUT).value(0);
+                Pin("LED", Pin.OUT).value(0)
             except Exception as e:
                 print("Error sending request:", e)
 
