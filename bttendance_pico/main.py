@@ -61,7 +61,8 @@ while True:
             rfid = int.from_bytes(bytes(uid),"little",False)
 
             SERVER_IP = env.get("SERVER_IP")
-            url = f"http://{SERVER_IP}/log-scan?rfid={rfid}&location={env.get("LOCATION")}"
+            SERVER_PORT = env.get("SERVER_PORT")
+            url = f"http://{SERVER_IP}:{SERVER_PORT}/log-scan?rfid={rfid}&location={env.get("LOCATION")}"
 
             def try_connection():
                 print("sending request")
