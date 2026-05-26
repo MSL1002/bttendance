@@ -1,23 +1,3 @@
-#REAL MAIN TIME!!!
-
-'''
-What does this need to do?
-
-connect to backend http server over WiFi
-
-if connection drops:
-    print error(s)
-    flash light
-    retry connection
-
-loop until we get a scan
-
-take scan's ID, put scan in DB as clock in (flask handles this)
-
-loop until we get another scan, etc...
-
-'''
-
 from mfrc522 import MFRC522
 from machine import Pin
 import network
@@ -102,4 +82,5 @@ finally:
     print("performing clean up...")
     wlan.disconnect()
     LED.off()
+    gc.collect()
     print("clean up OK.")
