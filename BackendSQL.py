@@ -1,4 +1,5 @@
 import mysql.connector
+from mysql.connector import errorcode
 import datetime
 import json
 
@@ -32,7 +33,10 @@ def log_attendance(rfid, location):
     except mysql.connector.Error as err:
         print("Insert failed.")
         print(err)
-        return err
+        if err.errno in (errorcode.ER_NO_REFERENCED_ROW_2, errorcode.ER_ROW_IS_REFERENCED_2):
+            return "RFID not found in database."
+        else:
+            return "Something went wrong, try again later."
 
 def insert_into_db(rfid, fName, lName, id):
     add_student = ("INSERT INTO users "
@@ -74,10 +78,59 @@ def get_from_db(id):
         cnx.close()
 
         return(result[0])
-    
+
     except mysql.connector.Error as err:
         print("Insert failed.")
         print(err)
 
     cursor.close()
     cnx.close()
+
+def get_all_users():
+    query = "SELECT id, rfid_uid, first_name, last_name, student_id FROM users ORDER BY last_name, first_name"
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute(query)
+        result = cursor.fetchall()
+        cursor.close()
+        cnx.close()
+        return result
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
+def get_attendance(student_id=None, location=None, date=None):
+    base = (
+        "SELECT u.first_name, u.last_name, u.student_id, "
+        "s.timestamp, s.location "
+        "FROM scans s "
+        "LEFT JOIN users u ON s.rfid_uid = u.rfid_uid"
+    )
+    conditions = []
+    data = []
+    if student_id:
+        conditions.append("u.student_id = %s")
+        data.append(student_id)
+    if location:
+        conditions.append("s.location = %s")
+        data.append(location)
+    if date:
+        conditions.append("DATE(s.timestamp) = %s")
+        data.append(date)
+
+    if conditions:
+        base += " WHERE " + " AND ".join(conditions)
+    base += " ORDER BY s.location, TIME(s.timestamp)"
+
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute(base, data if data else None)
+        result = cursor.fetchall()
+        cursor.close()
+        cnx.close()
+        return result
+    except mysql.connector.Error as err:
+        print(err)
+        return None

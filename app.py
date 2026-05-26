@@ -1,7 +1,11 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify, render_template
 import BackendSQL
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='bttendance_frontend')
+
+@app.route("/")
+def index():
+    return render_template("index.html")
 
 @app.route("/log-scan", methods=['POST'])
 def handle_login():
@@ -14,9 +18,9 @@ def handle_login():
             status = BackendSQL.log_attendance(rfid, local)
         except Exception as e:
             print(e)
-            return 'Scan err', 404
+            return status, 404
         if(status):
-            return 'logging error', 404 
+            return status, 404 
         else:
             return 'Success', 201
     return 'Scan err', 404
@@ -48,6 +52,29 @@ def create():
             return e, 404
         return 'Input Success', 201
     return 'Error', 404
+
+@app.route("/get-all-users", methods=['GET'])
+def get_all_users():
+    users = BackendSQL.get_all_users()
+    if users is None:
+        return jsonify({"error": "Database error"}), 500
+    for u in users:
+        if u.get('created_at'):
+            u['created_at'] = str(u['created_at'])
+    return jsonify(users), 200
+
+@app.route("/get-attendance", methods=['GET'])
+def get_attendance():
+    student_id = request.args.get('id')
+    location = request.args.get('location')
+    date = request.args.get('date')
+    records = BackendSQL.get_attendance(student_id, location, date)
+    if records is None:
+        return jsonify({"error": "Database error"}), 500
+    for r in records:
+        if r.get('timestamp'):
+            r['timestamp'] = str(r['timestamp'])
+    return jsonify(records), 200
 
 @app.route("/test", methods=['GET'])
 def test():

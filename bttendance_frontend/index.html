@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bttendance</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.4rem; letter-spacing: 0.05em; }
+
+    main {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      gap: 2rem;
+    }
+
+    section {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 1.5rem;
+    }
+
+    section h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 2px solid #e8eaf0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    th {
+      text-align: left;
+      padding: .55rem .75rem;
+      background: #f4f6f9;
+      font-weight: 600;
+      border-bottom: 1px solid #e0e3ea;
+    }
+    td {
+      padding: .55rem .75rem;
+      border-bottom: 1px solid #f0f2f6;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9fafc; }
+
+    .empty { color: #999; font-size: .88rem; padding: .5rem 0; }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .controls label { font-size: .9rem; font-weight: 500; }
+    .controls select, .controls input[type=text] {
+      padding: .4rem .65rem;
+      border: 1px solid #d0d4de;
+      border-radius: 5px;
+      font-size: .9rem;
+      background: #fff;
+    }
+
+    form .fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    form label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .3rem; color: #555; }
+    form input {
+      width: 100%;
+      padding: .45rem .7rem;
+      border: 1px solid #d0d4de;
+      border-radius: 5px;
+      font-size: .9rem;
+    }
+    form input:focus { outline: 2px solid #4f6ef7; border-color: transparent; }
+
+    button {
+      padding: .5rem 1.2rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    .btn-primary { background: #4f6ef7; color: #fff; }
+    .btn-secondary { background: #e8eaf0; color: #333; }
+
+    .badge {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 99px;
+      font-size: .75rem;
+      font-weight: 600;
+    }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-error   { background: #fee2e2; color: #991b1b; }
+
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      padding: .7rem 1.2rem;
+      border-radius: 6px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+    #toast.show { opacity: 1; }
+    #toast.ok  { background: #10b981; }
+    #toast.err { background: #ef4444; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>bttendance</h1>
+</header>
+
+<main>
+
+  <!-- ── Enrolled Students ── -->
+  <section>
+    <h2>Enrolled Students</h2>
+    <div class="controls">
+      <button class="btn-secondary" onclick="loadStudents()">Refresh</button>
+    </div>
+    <div id="students-wrap">
+      <p class="empty">Loading…</p>
+    </div>
+  </section>
+
+  <!-- ── Attendance ── -->
+  <section>
+    <h2>Attendance Records</h2>
+    <div class="controls">
+      <label for="att-filter">Student ID:</label>
+      <input type="text" id="att-filter" placeholder="any" style="width:9rem" />
+      <label for="att-location">Location:</label>
+      <input type="text" id="att-location" placeholder="any" style="width:9rem" />
+      <label for="att-date">Date:</label>
+      <input type="date" id="att-date" />
+      <button class="btn-primary" onclick="loadAttendance()">Search</button>
+      <button class="btn-secondary" onclick="clearAttendanceFilters()">Clear</button>
+    </div>
+    <div id="attendance-wrap">
+      <p class="empty">Loading…</p>
+    </div>
+  </section>
+
+  <!-- ── Create Student ── -->
+  <section>
+    <h2>Create Student</h2>
+    <form id="create-form" onsubmit="createStudent(event)">
+      <div class="fields">
+        <div>
+          <label for="c-fname">First Name</label>
+          <input id="c-fname" type="text" placeholder="Jane" required />
+        </div>
+        <div>
+          <label for="c-lname">Last Name</label>
+          <input id="c-lname" type="text" placeholder="Doe" required />
+        </div>
+        <div>
+          <label for="c-id">Student ID</label>
+          <input id="c-id" type="text" placeholder="12345" required />
+        </div>
+        <div>
+          <label for="c-rfid">RFID UID</label>
+          <input id="c-rfid" type="text" placeholder="card UID" required />
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Add Student</button>
+    </form>
+  </section>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+  function toast(msg, ok = true) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show ' + (ok ? 'ok' : 'err');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.className = '', 2800);
+  }
+
+  function renderStudents(students) {
+    const wrap = document.getElementById('students-wrap');
+    if (!students.length) {
+      wrap.innerHTML = '<p class="empty">No students enrolled yet.</p>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Student ID</th><th>First Name</th><th>Last Name</th>
+          <th>RFID UID</th><th>Enrolled</th>
+        </tr></thead>
+        <tbody>${students.map(s => `
+          <tr>
+            <td>${s.student_id ?? '—'}</td>
+            <td>${s.first_name}</td>
+            <td>${s.last_name}</td>
+            <td style="font-family:monospace;font-size:.82rem">${s.rfid_uid}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function renderAttendance(records) {
+    const wrap = document.getElementById('attendance-wrap');
+    if (!records.length) {
+      wrap.innerHTML = '<p class="empty">No records found.</p>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Student ID</th><th>Name</th><th>Location</th><th>Timestamp</th>
+        </tr></thead>
+        <tbody>${records.map(r => `
+          <tr>
+            <td>${r.student_id ?? '—'}</td>
+            <td>${r.first_name ? r.first_name + ' ' + r.last_name : '—'}</td>
+            <td>${r.location ?? '—'}</td>
+            <td>${r.timestamp ?? '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function loadStudents() {
+    document.getElementById('students-wrap').innerHTML = '<p class="empty">Loading…</p>';
+    try {
+      const res = await fetch('/get-all-users');
+      const data = await res.json();
+      renderStudents(data);
+    } catch {
+      document.getElementById('students-wrap').innerHTML = '<p class="empty">Failed to load students.</p>';
+    }
+  }
+
+  function clearAttendanceFilters() {
+    document.getElementById('att-filter').value = '';
+    document.getElementById('att-location').value = '';
+    document.getElementById('att-date').value = '';
+    loadAttendance();
+  }
+
+  async function loadAttendance() {
+    const id       = document.getElementById('att-filter').value.trim();
+    const location = document.getElementById('att-location').value.trim();
+    const date     = document.getElementById('att-date').value;
+    document.getElementById('attendance-wrap').innerHTML = '<p class="empty">Loading…</p>';
+    try {
+      const params = new URLSearchParams();
+      if (id)       params.set('id', id);
+      if (location) params.set('location', location);
+      if (date)     params.set('date', date);
+      const qs = params.toString();
+      const res = await fetch('/get-attendance' + (qs ? '?' + qs : ''));
+      const data = await res.json();
+      renderAttendance(data);
+    } catch {
+      document.getElementById('attendance-wrap').innerHTML = '<p class="empty">Failed to load attendance.</p>';
+    }
+  }
+
+  async function createStudent(e) {
+    e.preventDefault();
+    const body = new URLSearchParams({
+      fName: document.getElementById('c-fname').value.trim(),
+      lName: document.getElementById('c-lname').value.trim(),
+      id:    document.getElementById('c-id').value.trim(),
+      rfid:  document.getElementById('c-rfid').value.trim(),
+    });
+    try {
+      const res = await fetch('/create-user?' + body.toString(), { method: 'POST' });
+      if (res.ok) {
+        toast('Student created successfully.');
+        document.getElementById('create-form').reset();
+        loadStudents();
+      } else {
+        const msg = await res.text();
+        toast('Error: ' + msg, false);
+      }
+    } catch {
+      toast('Network error.', false);
+    }
+  }
+
+  loadStudents();
+  loadAttendance();
+</script>
+</body>
+</html>
