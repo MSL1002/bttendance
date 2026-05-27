@@ -149,7 +149,7 @@
 
 <main>
 
-  <!-- ── Enrolled Students ── -->
+  <!--  Enrolled Students  -->
   <section>
     <h2>Enrolled Students</h2>
     <div class="controls">
@@ -160,7 +160,7 @@
     </div>
   </section>
 
-  <!-- ── Attendance ── -->
+  <!--  Attendance  -->
   <section>
     <h2>Attendance Records</h2>
     <div class="controls">
@@ -178,10 +178,10 @@
     </div>
   </section>
 
-  <!-- ── Create Student ── -->
+  <!-- Create Student -->
   <section>
     <h2>Create Student</h2>
-    <form id="create-form" onsubmit="createStudent(event)">
+    <form id="create-form" onsubmit="enrollStudent(event)">
       <div class="fields">
         <div>
           <label for="c-fname">First Name</label>
@@ -195,12 +195,26 @@
           <label for="c-id">Student ID</label>
           <input id="c-id" type="text" placeholder="12345" required />
         </div>
+      </div>
+      <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+        <button type="submit" class="btn-primary" id="enroll-btn">Add Student</button>
+        <button type="button" class="btn-secondary" id="cancel-btn" style="display:none" onclick="cancelEnrollment()">Cancel</button>
+      </div>
+      <p id="enroll-status" style="margin-top:.75rem;font-size:.9rem;color:#555;"></p>
+    </form>
+  </section>
+
+  <!--  Remove Student  -->
+  <section>
+    <h2>Remove Student</h2>
+    <form id="delete-form" onsubmit="deleteStudent(event)">
+      <div class="fields">
         <div>
-          <label for="c-rfid">RFID UID</label>
-          <input id="c-rfid" type="text" placeholder="card UID" required />
+          <label for="d-id">Student ID</label>
+          <input id="d-id" type="text" placeholder="12345" required />
         </div>
       </div>
-      <button type="submit" class="btn-primary">Add Student</button>
+      <button type="submit" class="btn-primary" style="background:#ef4444">Remove Student</button>
     </form>
   </section>
 
@@ -299,27 +313,105 @@
     }
   }
 
-  async function createStudent(e) {
+  async function deleteStudent(e) {
     e.preventDefault();
-    const body = new URLSearchParams({
-      fName: document.getElementById('c-fname').value.trim(),
-      lName: document.getElementById('c-lname').value.trim(),
-      id:    document.getElementById('c-id').value.trim(),
-      rfid:  document.getElementById('c-rfid').value.trim(),
-    });
+    const id = document.getElementById('d-id').value.trim();
     try {
-      const res = await fetch('/create-user?' + body.toString(), { method: 'POST' });
+      const res = await fetch(`/delete-user?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (res.ok) {
-        toast('Student created successfully.');
-        document.getElementById('create-form').reset();
+        toast('Student removed.');
+        document.getElementById('delete-form').reset();
         loadStudents();
+      } else if (res.status === 404) {
+        toast('No student found with that ID.', false);
       } else {
-        const msg = await res.text();
-        toast('Error: ' + msg, false);
+        toast('Error removing student.', false);
       }
     } catch {
       toast('Network error.', false);
     }
+  }
+
+  let _activeEnrollment = null;
+
+  function cancelEnrollment() {
+    if (_activeEnrollment) {
+      _activeEnrollment.close();
+      _activeEnrollment = null;
+    }
+    document.getElementById('enroll-btn').disabled = false;
+    document.getElementById('cancel-btn').style.display = 'none';
+    document.getElementById('enroll-status').textContent = '';
+  }
+
+  async function enrollStudent(e) {
+    e.preventDefault();
+
+    if (_activeEnrollment) {
+      _activeEnrollment.close();
+      _activeEnrollment = null;
+    }
+
+    const params = new URLSearchParams({
+      fName: document.getElementById('c-fname').value.trim(),
+      lName: document.getElementById('c-lname').value.trim(),
+      id:    document.getElementById('c-id').value.trim(),
+    });
+
+    const btn    = document.getElementById('enroll-btn');
+    const cancel = document.getElementById('cancel-btn');
+    const status = document.getElementById('enroll-status');
+
+    btn.disabled = true;
+    cancel.style.display = 'inline-block';
+    status.textContent = 'Waiting for card scan…';
+
+    try {
+      const res = await fetch('/start-enrollment?' + params, { method: 'POST' });
+      if (!res.ok) {
+        status.textContent = 'Server error — try again.';
+        btn.disabled = false;
+        cancel.style.display = 'none';
+        return;
+      }
+    } catch {
+      status.textContent = 'Network error — try again.';
+      btn.disabled = false;
+      cancel.style.display = 'none';
+      return;
+    }
+
+    const sse = new EventSource('/enrollment-stream');
+    _activeEnrollment = sse;
+
+    sse.onmessage = (event) => {
+      sse.close();
+      _activeEnrollment = null;
+      btn.disabled = false;
+      cancel.style.display = 'none';
+
+      if (event.data === 'success') {
+        toast('Student enrolled successfully.');
+        status.textContent = '';
+        document.getElementById('create-form').reset();
+        loadStudents();
+      } else if (event.data === 'timeout') {
+        status.textContent = 'Timed out — no card scanned within 2 minutes.';
+        toast('Enrollment timed out.', false);
+      } else {
+        status.textContent = 'Enrollment failed — check server logs.';
+        toast('Enrollment error.', false);
+      }
+    };
+
+    sse.onerror = () => {
+      sse.close();
+      _activeEnrollment = null;
+      btn.disabled = false;
+      cancel.style.display = 'none';
+      status.textContent = 'Connection lost — try again.';
+      toast('SSE connection error.', false);
+    };
   }
 
   loadStudents();

@@ -1,7 +1,13 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Response
 import BackendSQL
+import queue
+import threading
 
 app = Flask(__name__, template_folder='bttendance_frontend')
+
+# Single enrollment slot — only one student can be enrolled at a time
+_enrollment_lock = threading.Lock()
+_pending_enrollment = None  # dict with fName, lName, id, queue — or None
 
 @app.route("/")
 def index():
@@ -37,21 +43,65 @@ def get():
             return 'Get error\n' + type(e).__name__, 404
     return 'Get err', 404
 
-@app.route("/create-user", methods=['POST'])
-def create():
-    if request.method == 'POST':
+@app.route("/start-enrollment", methods=['POST'])
+def start_enrollment():
+    global _pending_enrollment
+    fName = request.args.get('fName')
+    lName = request.args.get('lName')
+    student_id = request.args.get('id')
+
+    with _enrollment_lock:
+        _pending_enrollment = {
+            'fName': fName,
+            'lName': lName,
+            'id': student_id,
+            'queue': queue.Queue(),
+        }
+
+    return 'OK', 200
+
+
+@app.route("/enrollment-stream")
+def enrollment_stream():
+    def event_stream():
+        with _enrollment_lock:
+            enrollment = _pending_enrollment
+        if not enrollment:
+            yield "data: error\n\n"
+            return
         try:
+            result = enrollment['queue'].get(timeout=120)
+            yield f"data: {result}\n\n"
+        except queue.Empty:
+            yield "data: timeout\n\n"
 
-            rfid = request.args.get('rfid')
-            fName = request.args.get('fName')
-            lName = request.args.get('lName')
-            id = request.args.get('id')
+    return Response(event_stream(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
-            BackendSQL.insert_into_db(rfid, fName, lName, id)
-        except Exception as e:
-            return e, 404
-        return 'Input Success', 201
-    return 'Error', 404
+
+@app.route("/enroll-rfid", methods=['POST'])
+def enroll_rfid():
+    global _pending_enrollment
+    rfid = request.args.get('rfid')
+
+    with _enrollment_lock:
+        enrollment = _pending_enrollment
+
+    if not enrollment:
+        return 'No pending enrollment', 404
+
+    try:
+        BackendSQL.insert_into_db(rfid, enrollment['fName'], enrollment['lName'], enrollment['id'])
+    except Exception as e:
+        enrollment['queue'].put('error')
+        return str(e), 500
+
+    enrollment['queue'].put('success')
+
+    with _enrollment_lock:
+        _pending_enrollment = None
+
+    return 'Enrolled', 201
 
 @app.route("/get-all-users", methods=['GET'])
 def get_all_users():
@@ -76,9 +126,19 @@ def get_attendance():
             r['timestamp'] = str(r['timestamp'])
     return jsonify(records), 200
 
+@app.route("/delete-user", methods=['DELETE'])
+def delete_user():
+    student_id = request.args.get('id')
+    affected = BackendSQL.delete_student(student_id)
+    if affected is None:
+        return 'Database error', 500
+    if affected == 0:
+        return 'Student not found', 404
+    return 'Deleted', 200
+
 @app.route("/test", methods=['GET'])
 def test():
     return "Backend is running."
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, threaded=True)

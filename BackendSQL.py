@@ -100,6 +100,21 @@ def get_all_users():
         print(err)
         return None
 
+def delete_student(student_id):
+    query = "DELETE FROM users WHERE student_id = %s"
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor()
+        cursor.execute(query, (student_id,))
+        cnx.commit()
+        affected = cursor.rowcount
+        cursor.close()
+        cnx.close()
+        return affected
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
 def get_attendance(student_id=None, location=None, date=None):
     base = (
         "SELECT u.first_name, u.last_name, u.student_id, "

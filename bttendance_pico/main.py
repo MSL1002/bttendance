@@ -70,7 +70,7 @@ try:
                     print("Error sending request:", e)
                     flash_LED(5)
 
-                response.close()
+                
                 time.sleep(1)
                 
                 print("Awaiting ID")
