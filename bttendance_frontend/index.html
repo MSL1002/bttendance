@@ -139,6 +139,62 @@
     #toast.show { opacity: 1; }
     #toast.ok  { background: #10b981; }
     #toast.err { background: #ef4444; }
+
+    .day-check {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      padding: .3rem .65rem;
+      border: 1px solid #d0d4de;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: .88rem;
+      user-select: none;
+      transition: background .1s, color .1s;
+    }
+    .day-check:has(input:checked) { background: #4f6ef7; color: #fff; border-color: #4f6ef7; }
+    .day-check input { display: none; }
+
+    .rate-badge {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 99px;
+      font-size: .8rem;
+      font-weight: 700;
+    }
+    .rate-high   { background: #d1fae5; color: #065f46; }
+    .rate-mid    { background: #fef3c7; color: #92400e; }
+    .rate-low    { background: #fee2e2; color: #991b1b; }
+    .rate-na     { color: #999; font-size: .85rem; }
+
+    .enroll-panel {
+      background: #f8fafc;
+      border-radius: 6px;
+      padding: .85rem 1rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    .enroll-panel h4 { font-size: .88rem; font-weight: 600; margin-bottom: .5rem; }
+    .enroll-scroll { max-height: 180px; overflow-y: auto; }
+    .enroll-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .28rem 0;
+      border-bottom: 1px solid #eef0f5;
+      font-size: .88rem;
+    }
+    .enroll-row:last-child { border-bottom: none; }
+
+    form select {
+      width: 100%;
+      padding: .45rem .7rem;
+      border: 1px solid #d0d4de;
+      border-radius: 5px;
+      font-size: .9rem;
+      background: #fff;
+    }
   </style>
 </head>
 <body>
@@ -216,6 +272,87 @@
       </div>
       <button type="submit" class="btn-primary" style="background:#ef4444">Remove Student</button>
     </form>
+  </section>
+
+  <!-- Manage Instructors -->
+  <section>
+    <h2>Manage Instructors</h2>
+    <div id="instructors-wrap"><p class="empty">Loading…</p></div>
+    <form id="add-instructor-form" onsubmit="addInstructor(event)" style="margin-top:1.25rem;padding-top:1rem;border-top:2px solid #e8eaf0">
+      <p style="font-size:.88rem;font-weight:600;color:#555;margin-bottom:.75rem">Add Instructor</p>
+      <div class="fields">
+        <div>
+          <label for="i-fname">First Name</label>
+          <input id="i-fname" type="text" placeholder="Jane" required />
+        </div>
+        <div>
+          <label for="i-lname">Last Name</label>
+          <input id="i-lname" type="text" placeholder="Doe" required />
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Add Instructor</button>
+    </form>
+  </section>
+
+  <!-- Manage Classes -->
+  <section>
+    <h2>Manage Classes</h2>
+    <div id="classes-wrap"><p class="empty">Loading…</p></div>
+    <form id="add-class-form" onsubmit="addClass(event)" style="margin-top:1.25rem;padding-top:1rem;border-top:2px solid #e8eaf0">
+      <p style="font-size:.88rem;font-weight:600;color:#555;margin-bottom:.75rem">Add Class</p>
+      <div class="fields">
+        <div>
+          <label for="cl-name">Class Name</label>
+          <input id="cl-name" type="text" placeholder="Math 101" required />
+        </div>
+        <div>
+          <label for="cl-instructor">Instructor</label>
+          <select id="cl-instructor" required></select>
+        </div>
+        <div>
+          <label for="cl-location">Location / Room</label>
+          <input id="cl-location" type="text" placeholder="Room A" required />
+        </div>
+        <div>
+          <label for="cl-start-time">Start Time</label>
+          <input id="cl-start-time" type="time" required />
+        </div>
+        <div>
+          <label for="cl-end-time">End Time</label>
+          <input id="cl-end-time" type="time" required />
+        </div>
+        <div>
+          <label for="cl-start-date">Start Date</label>
+          <input id="cl-start-date" type="date" required />
+        </div>
+        <div>
+          <label for="cl-end-date">End Date</label>
+          <input id="cl-end-date" type="date" required />
+        </div>
+      </div>
+      <div style="margin-bottom:.85rem">
+        <label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:.4rem">Days of Week</label>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <label class="day-check"><input type="checkbox" value="M" />Mon</label>
+          <label class="day-check"><input type="checkbox" value="T" />Tue</label>
+          <label class="day-check"><input type="checkbox" value="W" />Wed</label>
+          <label class="day-check"><input type="checkbox" value="R" />Thu</label>
+          <label class="day-check"><input type="checkbox" value="F" />Fri</label>
+          <label class="day-check"><input type="checkbox" value="S" />Sat</label>
+          <label class="day-check"><input type="checkbox" value="U" />Sun</label>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary">Add Class</button>
+    </form>
+  </section>
+
+  <!-- Analytics -->
+  <section>
+    <h2>Attendance Analytics</h2>
+    <div class="controls">
+      <button class="btn-primary" onclick="loadAnalytics()">Refresh Analytics</button>
+    </div>
+    <div id="analytics-wrap"><p class="empty">Click Refresh Analytics to load.</p></div>
   </section>
 
 </main>
@@ -416,6 +553,327 @@
 
   loadStudents();
   loadAttendance();
+
+  // ─── Instructors ──────────────────────────────────────────────────────────
+
+  async function loadInstructors() {
+    const wrap = document.getElementById('instructors-wrap');
+    wrap.innerHTML = '<p class="empty">Loading…</p>';
+    try {
+      const data = await fetch('/get-all-instructors').then(r => r.json());
+      if (!data.length) {
+        wrap.innerHTML = '<p class="empty">No instructors added yet.</p>';
+        return;
+      }
+      wrap.innerHTML = `
+        <table>
+          <thead><tr><th>Name</th><th></th></tr></thead>
+          <tbody>${data.map(i => `
+            <tr>
+              <td>${i.first_name} ${i.last_name}</td>
+              <td><button class="btn-secondary"
+                    style="padding:.25rem .6rem;font-size:.8rem;background:#fee2e2;color:#991b1b"
+                    onclick="deleteInstructor(${i.id})">Remove</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+    } catch {
+      wrap.innerHTML = '<p class="empty">Failed to load instructors.</p>';
+    }
+  }
+
+  async function addInstructor(e) {
+    e.preventDefault();
+    const params = new URLSearchParams({
+      fName: document.getElementById('i-fname').value.trim(),
+      lName: document.getElementById('i-lname').value.trim(),
+    });
+    const res = await fetch('/add-instructor?' + params, { method: 'POST' });
+    if (res.ok) {
+      toast('Instructor added.');
+      document.getElementById('add-instructor-form').reset();
+      loadInstructors();
+      loadClassInstructorOptions();
+    } else {
+      toast('Failed to add instructor.', false);
+    }
+  }
+
+  async function deleteInstructor(id) {
+    const res = await fetch(`/delete-instructor?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast('Instructor removed (and their classes).');
+      loadInstructors();
+      loadClasses();
+      loadClassInstructorOptions();
+    } else {
+      toast('Failed to remove instructor.', false);
+    }
+  }
+
+  // ─── Classes ──────────────────────────────────────────────────────────────
+
+  async function loadClassInstructorOptions() {
+    const sel = document.getElementById('cl-instructor');
+    try {
+      const data = await fetch('/get-all-instructors').then(r => r.json());
+      sel.innerHTML = data.length
+        ? data.map(i => `<option value="${i.id}">${i.first_name} ${i.last_name}</option>`).join('')
+        : '<option value="">— add an instructor first —</option>';
+    } catch {
+      sel.innerHTML = '<option value="">Error loading instructors</option>';
+    }
+  }
+
+  async function loadClasses() {
+    const wrap = document.getElementById('classes-wrap');
+    wrap.innerHTML = '<p class="empty">Loading…</p>';
+    try {
+      const data = await fetch('/get-all-classes').then(r => r.json());
+      if (!data.length) {
+        wrap.innerHTML = '<p class="empty">No classes added yet.</p>';
+        return;
+      }
+      wrap.innerHTML = `
+        <div style="overflow-x:auto">
+        <table id="classes-table">
+          <thead><tr>
+            <th>Class</th><th>Instructor</th><th>Location</th>
+            <th>Schedule</th><th>Dates</th><th>Enrolled</th><th></th>
+          </tr></thead>
+          <tbody>${data.map(c => `
+            <tr id="class-row-${c.id}">
+              <td>${c.name}</td>
+              <td>${c.instructor}</td>
+              <td>${c.location}</td>
+              <td style="white-space:nowrap">${c.days_of_week} ${c.start_time}–${c.end_time}</td>
+              <td style="white-space:nowrap;font-size:.83rem">${c.start_date} → ${c.end_date}</td>
+              <td id="ec-${c.id}">${c.enrolled_count}</td>
+              <td style="white-space:nowrap">
+                <button class="btn-secondary"
+                  style="padding:.25rem .6rem;font-size:.8rem;margin-right:.3rem"
+                  id="ep-btn-${c.id}"
+                  onclick="toggleEnrollmentPanel(${c.id})">Enrollment</button>
+                <button class="btn-secondary"
+                  style="padding:.25rem .6rem;font-size:.8rem;background:#fee2e2;color:#991b1b"
+                  onclick="deleteClass(${c.id})">Delete</button>
+              </td>
+            </tr>
+            <tr id="ep-row-${c.id}" style="display:none">
+              <td colspan="7"><div id="ep-${c.id}" class="enroll-panel"></div></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>`;
+    } catch {
+      wrap.innerHTML = '<p class="empty">Failed to load classes.</p>';
+    }
+  }
+
+  async function addClass(e) {
+    e.preventDefault();
+    const days = [...document.querySelectorAll('.day-check input:checked')].map(c => c.value).join('');
+    if (!days) { toast('Select at least one day of the week.', false); return; }
+    const params = new URLSearchParams({
+      name:          document.getElementById('cl-name').value.trim(),
+      instructor_id: document.getElementById('cl-instructor').value,
+      location:      document.getElementById('cl-location').value.trim(),
+      days,
+      start_time:    document.getElementById('cl-start-time').value,
+      end_time:      document.getElementById('cl-end-time').value,
+      start_date:    document.getElementById('cl-start-date').value,
+      end_date:      document.getElementById('cl-end-date').value,
+    });
+    const res = await fetch('/add-class?' + params, { method: 'POST' });
+    if (res.ok) {
+      toast('Class added.');
+      document.getElementById('add-class-form').reset();
+      loadClasses();
+    } else {
+      toast('Failed to add class.', false);
+    }
+  }
+
+  async function deleteClass(id) {
+    const res = await fetch(`/delete-class?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast('Class deleted.');
+      loadClasses();
+    } else {
+      toast('Failed to delete class.', false);
+    }
+  }
+
+  // ─── Enrollment Panel ─────────────────────────────────────────────────────
+
+  let _openPanel = null;
+
+  function toggleEnrollmentPanel(classId) {
+    const row = document.getElementById(`ep-row-${classId}`);
+    const btn = document.getElementById(`ep-btn-${classId}`);
+    if (_openPanel === classId) {
+      row.style.display = 'none';
+      btn.textContent = 'Enrollment';
+      _openPanel = null;
+      return;
+    }
+    if (_openPanel !== null) {
+      const prev = document.getElementById(`ep-row-${_openPanel}`);
+      const prevBtn = document.getElementById(`ep-btn-${_openPanel}`);
+      if (prev) prev.style.display = 'none';
+      if (prevBtn) prevBtn.textContent = 'Enrollment';
+    }
+    _openPanel = classId;
+    row.style.display = '';
+    btn.textContent = 'Close';
+    loadEnrollmentPanel(classId);
+  }
+
+  async function loadEnrollmentPanel(classId) {
+    const panel = document.getElementById(`ep-${classId}`);
+    panel.innerHTML = '<p class="empty" style="padding:.5rem">Loading…</p>';
+    try {
+      const [enrolled, allUsers] = await Promise.all([
+        fetch(`/get-class-enrollments?class_id=${classId}`).then(r => r.json()),
+        fetch('/get-all-users').then(r => r.json()),
+      ]);
+      const enrolledIds = new Set(enrolled.map(e => e.id));
+      const unenrolled  = allUsers.filter(u => !enrolledIds.has(u.id));
+
+      panel.innerHTML = `
+        <div>
+          <h4>Enrolled (${enrolled.length})</h4>
+          <div class="enroll-scroll">
+            ${enrolled.length === 0
+              ? '<p class="empty">None enrolled</p>'
+              : enrolled.map(s => `
+                  <div class="enroll-row">
+                    <span>${s.first_name} ${s.last_name}
+                      <span style="color:#999;font-size:.8rem">(${s.student_id})</span>
+                    </span>
+                    <button class="btn-secondary"
+                      style="padding:.2rem .5rem;font-size:.78rem;background:#fee2e2;color:#991b1b"
+                      onclick="unenrollStudent(${classId}, ${s.id})">Remove</button>
+                  </div>`).join('')}
+          </div>
+        </div>
+        <div>
+          <h4>Add Student</h4>
+          ${unenrolled.length === 0
+            ? '<p class="empty">All students enrolled</p>'
+            : `<select id="enroll-sel-${classId}" style="margin-bottom:.5rem">
+                 ${unenrolled.map(u =>
+                   `<option value="${u.id}">${u.first_name} ${u.last_name} (${u.student_id})</option>`
+                 ).join('')}
+               </select>
+               <button class="btn-primary" style="padding:.35rem .9rem;font-size:.88rem"
+                 onclick="enrollStudent(${classId})">Add</button>`}
+        </div>`;
+    } catch {
+      panel.innerHTML = '<p class="empty" style="padding:.5rem">Failed to load data.</p>';
+    }
+  }
+
+  async function enrollStudent(classId) {
+    const sel = document.getElementById(`enroll-sel-${classId}`);
+    const res = await fetch(`/enroll-student?class_id=${classId}&user_id=${sel.value}`, { method: 'POST' });
+    if (res.ok) {
+      toast('Student added to class.');
+      loadEnrollmentPanel(classId);
+      document.getElementById(`ec-${classId}`).textContent =
+        parseInt(document.getElementById(`ec-${classId}`).textContent) + 1;
+    } else {
+      toast('Failed to enroll student.', false);
+    }
+  }
+
+  async function unenrollStudent(classId, userId) {
+    const res = await fetch(`/unenroll-student?class_id=${classId}&user_id=${userId}`, { method: 'DELETE' });
+    if (res.ok) {
+      toast('Student removed from class.');
+      loadEnrollmentPanel(classId);
+      document.getElementById(`ec-${classId}`).textContent =
+        parseInt(document.getElementById(`ec-${classId}`).textContent) - 1;
+    } else {
+      toast('Failed to remove student.', false);
+    }
+  }
+
+  // ─── Analytics ────────────────────────────────────────────────────────────
+
+  function rateBadge(rate) {
+    if (rate === null || rate === undefined)
+      return '<span class="rate-na">N/A</span>';
+    const pct = (rate * 100).toFixed(1) + '%';
+    const cls = rate >= 0.8 ? 'rate-high' : rate >= 0.6 ? 'rate-mid' : 'rate-low';
+    return `<span class="rate-badge ${cls}">${pct}</span>`;
+  }
+
+  async function loadAnalytics() {
+    const wrap = document.getElementById('analytics-wrap');
+    wrap.innerHTML = '<p class="empty">Loading…</p>';
+    try {
+      const data = await fetch('/get-analytics').then(r => r.json());
+
+      const byClass = [...data.by_class].sort((a, b) => {
+        if (a.attendance_rate === null && b.attendance_rate === null) return 0;
+        if (a.attendance_rate === null) return 1;
+        if (b.attendance_rate === null) return -1;
+        return b.attendance_rate - a.attendance_rate;
+      });
+
+      wrap.innerHTML = `
+        <p style="font-size:.95rem;font-weight:600;margin-bottom:.75rem">By Class
+          <span style="font-weight:400;font-size:.82rem;color:#888;margin-left:.5rem">sorted best → worst</span>
+        </p>
+        ${byClass.length === 0
+          ? '<p class="empty">No classes configured yet.</p>'
+          : `<div style="overflow-x:auto">
+             <table>
+               <thead><tr>
+                 <th>Class</th><th>Instructor</th><th>Location</th><th>Schedule</th>
+                 <th>Enrolled</th><th>Sessions</th>
+                 <th>Attended<br><span style="font-weight:400;font-size:.75rem">student-sessions</span></th>
+                 <th>Rate</th>
+               </tr></thead>
+               <tbody>${byClass.map(c => `
+                 <tr>
+                   <td>${c.class_name}</td>
+                   <td>${c.instructor}</td>
+                   <td>${c.location}</td>
+                   <td style="white-space:nowrap">${c.schedule}</td>
+                   <td>${c.enrolled}</td>
+                   <td>${c.sessions_held}</td>
+                   <td>${c.attended_student_sessions}</td>
+                   <td>${rateBadge(c.attendance_rate)}</td>
+                 </tr>`).join('')}
+               </tbody>
+             </table>
+             </div>`}
+
+        <p style="font-size:.95rem;font-weight:600;margin:1.5rem 0 .75rem">By Instructor</p>
+        ${data.by_instructor.length === 0
+          ? '<p class="empty">No instructors yet.</p>'
+          : `<div style="overflow-x:auto">
+             <table>
+               <thead><tr><th>Instructor</th><th>Classes</th><th>Overall Rate</th></tr></thead>
+               <tbody>${data.by_instructor.map(i => `
+                 <tr>
+                   <td>${i.instructor}</td>
+                   <td>${i.classes}</td>
+                   <td>${rateBadge(i.attendance_rate)}</td>
+                 </tr>`).join('')}
+               </tbody>
+             </table>
+             </div>`}`;
+    } catch {
+      wrap.innerHTML = '<p class="empty">Failed to load analytics.</p>';
+    }
+  }
+
+  loadInstructors();
+  loadClassInstructorOptions();
+  loadClasses();
 </script>
 </body>
 </html>

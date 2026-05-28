@@ -115,6 +115,282 @@ def delete_student(student_id):
         print(err)
         return None
 
+_DAY_TO_MYSQL_DOW  = {'M': 2, 'T': 3, 'W': 4, 'R': 5, 'F': 6, 'S': 7, 'U': 1}
+_DAY_TO_PY_WEEKDAY = {'M': 0, 'T': 1, 'W': 2, 'R': 3, 'F': 4, 'S': 5, 'U': 6}
+
+def _days_to_mysql_dow(days_str):
+    return [_DAY_TO_MYSQL_DOW[d] for d in days_str.upper() if d in _DAY_TO_MYSQL_DOW]
+
+def _count_sessions(start_date, end_date, days_str):
+    py_weekdays = {_DAY_TO_PY_WEEKDAY[d] for d in days_str.upper() if d in _DAY_TO_PY_WEEKDAY}
+    end = min(end_date, datetime.date.today())
+    if start_date > end:
+        return 0
+    count = 0
+    d = start_date
+    while d <= end:
+        if d.weekday() in py_weekdays:
+            count += 1
+        d += datetime.timedelta(days=1)
+    return count
+
+def _td_to_time(val):
+    if isinstance(val, datetime.timedelta):
+        s = int(val.total_seconds())
+        return datetime.time(s // 3600, (s % 3600) // 60, s % 60)
+    return val
+
+def get_all_instructors():
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("SELECT id, first_name, last_name FROM instructors ORDER BY last_name, first_name")
+        result = cursor.fetchall()
+        cursor.close()
+        cnx.close()
+        return result
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
+def add_instructor(first_name, last_name):
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor()
+        cursor.execute("INSERT INTO instructors (first_name, last_name) VALUES (%s, %s)", (first_name, last_name))
+        cnx.commit()
+        new_id = cursor.lastrowid
+        cursor.close()
+        cnx.close()
+        return new_id
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
+def delete_instructor(instructor_id):
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor()
+        cursor.execute("DELETE FROM instructors WHERE id = %s", (instructor_id,))
+        cnx.commit()
+        affected = cursor.rowcount
+        cursor.close()
+        cnx.close()
+        return affected
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
+def get_all_classes():
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT c.id, c.name, c.location, c.days_of_week,
+                   c.start_time, c.end_time, c.start_date, c.end_date,
+                   i.id as instructor_id,
+                   CONCAT(i.first_name, ' ', i.last_name) as instructor,
+                   COUNT(ce.user_id) as enrolled_count
+            FROM classes c
+            JOIN instructors i ON c.instructor_id = i.id
+            LEFT JOIN class_enrollments ce ON ce.class_id = c.id
+            GROUP BY c.id, i.id
+            ORDER BY c.name
+        """)
+        result = cursor.fetchall()
+        cursor.close()
+        cnx.close()
+        for row in result:
+            row['start_time'] = str(_td_to_time(row['start_time']))[:5]
+            row['end_time']   = str(_td_to_time(row['end_time']))[:5]
+            row['start_date'] = str(row['start_date'])
+            row['end_date']   = str(row['end_date'])
+        return result
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
+def add_class(name, instructor_id, location, days_of_week, start_time, end_time, start_date, end_date):
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor()
+        cursor.execute(
+            "INSERT INTO classes "
+            "(name, instructor_id, location, days_of_week, start_time, end_time, start_date, end_date) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (name, instructor_id, location, days_of_week, start_time, end_time, start_date, end_date)
+        )
+        cnx.commit()
+        new_id = cursor.lastrowid
+        cursor.close()
+        cnx.close()
+        return new_id
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
+def delete_class(class_id):
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor()
+        cursor.execute("DELETE FROM classes WHERE id = %s", (class_id,))
+        cnx.commit()
+        affected = cursor.rowcount
+        cursor.close()
+        cnx.close()
+        return affected
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
+def get_class_enrollments(class_id):
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT u.id, u.first_name, u.last_name, u.student_id
+            FROM class_enrollments ce
+            JOIN users u ON ce.user_id = u.id
+            WHERE ce.class_id = %s
+            ORDER BY u.last_name, u.first_name
+        """, (class_id,))
+        result = cursor.fetchall()
+        cursor.close()
+        cnx.close()
+        return result
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
+def enroll_student_in_class(class_id, user_id):
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor()
+        cursor.execute(
+            "INSERT IGNORE INTO class_enrollments (class_id, user_id) VALUES (%s, %s)",
+            (class_id, user_id)
+        )
+        cnx.commit()
+        cursor.close()
+        cnx.close()
+        return True
+    except mysql.connector.Error as err:
+        print(err)
+        return False
+
+def unenroll_student_from_class(class_id, user_id):
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor()
+        cursor.execute(
+            "DELETE FROM class_enrollments WHERE class_id = %s AND user_id = %s",
+            (class_id, user_id)
+        )
+        cnx.commit()
+        cursor.close()
+        cnx.close()
+        return True
+    except mysql.connector.Error as err:
+        print(err)
+        return False
+
+def get_analytics():
+    try:
+        cnx = mysql.connector.connect(**env)
+        cursor = cnx.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT c.id, c.name, c.location, c.days_of_week,
+                   c.start_time, c.end_time, c.start_date, c.end_date,
+                   i.id as instructor_id,
+                   CONCAT(i.first_name, ' ', i.last_name) as instructor,
+                   COUNT(ce.user_id) as enrolled_count
+            FROM classes c
+            JOIN instructors i ON c.instructor_id = i.id
+            LEFT JOIN class_enrollments ce ON ce.class_id = c.id
+            GROUP BY c.id, i.id
+            ORDER BY c.name
+        """)
+        classes = cursor.fetchall()
+
+        by_class = []
+        instructor_totals = {}
+
+        for cls in classes:
+            days_str = cls['days_of_week']
+            dow_list = _days_to_mysql_dow(days_str)
+            start_t  = _td_to_time(cls['start_time'])
+            end_t    = _td_to_time(cls['end_time'])
+            start_d  = cls['start_date']
+            end_d    = cls['end_date']
+            enrolled = cls['enrolled_count']
+            sessions = _count_sessions(start_d, end_d, days_str)
+
+            attended = 0
+            if enrolled > 0 and sessions > 0 and dow_list:
+                ph = ','.join(['%s'] * len(dow_list))
+                cursor.execute(
+                    f"""SELECT COUNT(DISTINCT u.id, DATE(s.timestamp)) as attended
+                        FROM scans s
+                        JOIN users u ON s.rfid_uid = u.rfid_uid
+                        JOIN class_enrollments ce ON ce.user_id = u.id AND ce.class_id = %s
+                        WHERE s.location = %s
+                          AND TIME(s.timestamp) BETWEEN %s AND %s
+                          AND DATE(s.timestamp) BETWEEN %s AND LEAST(%s, CURDATE())
+                          AND DAYOFWEEK(s.timestamp) IN ({ph})""",
+                    [cls['id'], cls['location'], start_t, end_t, start_d, end_d] + dow_list
+                )
+                row = cursor.fetchone()
+                attended = int(row['attended']) if row and row['attended'] else 0
+
+            total_possible = sessions * enrolled
+            rate = round(attended / total_possible, 4) if total_possible > 0 else None
+
+            by_class.append({
+                'class_id':                cls['id'],
+                'class_name':              cls['name'],
+                'instructor':              cls['instructor'],
+                'instructor_id':           cls['instructor_id'],
+                'location':                cls['location'],
+                'schedule':                f"{days_str} {str(start_t)[:5]}–{str(end_t)[:5]}",
+                'sessions_held':           sessions,
+                'enrolled':                enrolled,
+                'attended_student_sessions': attended,
+                'attendance_rate':         rate,
+            })
+
+            iid = cls['instructor_id']
+            if iid not in instructor_totals:
+                instructor_totals[iid] = {
+                    'instructor_id': iid,
+                    'instructor':    cls['instructor'],
+                    'classes':       0,
+                    'total_attended': 0,
+                    'total_possible': 0,
+                }
+            instructor_totals[iid]['classes']        += 1
+            instructor_totals[iid]['total_attended']  += attended
+            instructor_totals[iid]['total_possible']  += total_possible
+
+        by_instructor = []
+        for stats in instructor_totals.values():
+            tp = stats['total_possible']
+            by_instructor.append({
+                'instructor_id':   stats['instructor_id'],
+                'instructor':      stats['instructor'],
+                'classes':         stats['classes'],
+                'attendance_rate': round(stats['total_attended'] / tp, 4) if tp > 0 else None,
+            })
+        by_instructor.sort(key=lambda x: (x['attendance_rate'] is None, -(x['attendance_rate'] or 0)))
+
+        cursor.close()
+        cnx.close()
+        return {'by_class': by_class, 'by_instructor': by_instructor}
+
+    except mysql.connector.Error as err:
+        print(err)
+        return None
+
 def get_attendance(student_id=None, location=None, date=None):
     base = (
         "SELECT u.first_name, u.last_name, u.student_id, "

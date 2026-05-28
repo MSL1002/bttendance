@@ -136,9 +136,100 @@ def delete_user():
         return 'Student not found', 404
     return 'Deleted', 200
 
+@app.route("/get-all-instructors", methods=['GET'])
+def get_all_instructors():
+    result = BackendSQL.get_all_instructors()
+    if result is None:
+        return jsonify({"error": "Database error"}), 500
+    return jsonify(result), 200
+
+@app.route("/add-instructor", methods=['POST'])
+def add_instructor():
+    first_name = request.args.get('fName', '').strip()
+    last_name  = request.args.get('lName', '').strip()
+    if not first_name or not last_name:
+        return 'Missing name fields', 400
+    new_id = BackendSQL.add_instructor(first_name, last_name)
+    if new_id is None:
+        return 'Database error', 500
+    return jsonify({'id': new_id}), 201
+
+@app.route("/delete-instructor", methods=['DELETE'])
+def delete_instructor():
+    instructor_id = request.args.get('id')
+    affected = BackendSQL.delete_instructor(instructor_id)
+    if affected is None:
+        return 'Database error', 500
+    if affected == 0:
+        return 'Instructor not found', 404
+    return 'Deleted', 200
+
+@app.route("/get-all-classes", methods=['GET'])
+def get_all_classes():
+    result = BackendSQL.get_all_classes()
+    if result is None:
+        return jsonify({"error": "Database error"}), 500
+    return jsonify(result), 200
+
+@app.route("/add-class", methods=['POST'])
+def add_class():
+    name          = request.args.get('name', '').strip()
+    instructor_id = request.args.get('instructor_id')
+    location      = request.args.get('location', '').strip()
+    days          = request.args.get('days', '').strip().upper()
+    start_time    = request.args.get('start_time')
+    end_time      = request.args.get('end_time')
+    start_date    = request.args.get('start_date')
+    end_date      = request.args.get('end_date')
+    if not all([name, instructor_id, location, days, start_time, end_time, start_date, end_date]):
+        return 'Missing required fields', 400
+    new_id = BackendSQL.add_class(name, instructor_id, location, days, start_time, end_time, start_date, end_date)
+    if new_id is None:
+        return 'Database error', 500
+    return jsonify({'id': new_id}), 201
+
+@app.route("/delete-class", methods=['DELETE'])
+def delete_class():
+    class_id = request.args.get('id')
+    affected = BackendSQL.delete_class(class_id)
+    if affected is None:
+        return 'Database error', 500
+    if affected == 0:
+        return 'Class not found', 404
+    return 'Deleted', 200
+
+@app.route("/get-class-enrollments", methods=['GET'])
+def get_class_enrollments():
+    class_id = request.args.get('class_id')
+    result = BackendSQL.get_class_enrollments(class_id)
+    if result is None:
+        return jsonify({"error": "Database error"}), 500
+    return jsonify(result), 200
+
+@app.route("/enroll-student", methods=['POST'])
+def enroll_student():
+    class_id = request.args.get('class_id')
+    user_id  = request.args.get('user_id')
+    ok = BackendSQL.enroll_student_in_class(class_id, user_id)
+    return ('OK', 200) if ok else ('Database error', 500)
+
+@app.route("/unenroll-student", methods=['DELETE'])
+def unenroll_student():
+    class_id = request.args.get('class_id')
+    user_id  = request.args.get('user_id')
+    ok = BackendSQL.unenroll_student_from_class(class_id, user_id)
+    return ('OK', 200) if ok else ('Database error', 500)
+
+@app.route("/get-analytics", methods=['GET'])
+def get_analytics():
+    result = BackendSQL.get_analytics()
+    if result is None:
+        return jsonify({"error": "Database error"}), 500
+    return jsonify(result), 200
+
 @app.route("/test", methods=['GET'])
 def test():
     return "Backend is running."
 
 if __name__ == '__main__':
-    app.run(host='10.58.86.206', port=5000, threaded=True)
+    app.run(host='0.0.0.0', port=5000, threaded=True)
