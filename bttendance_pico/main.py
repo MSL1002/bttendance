@@ -1,3 +1,23 @@
+#REAL MAIN TIME!!!
+
+'''
+What does this need to do?
+
+connect to backend http server over WiFi
+
+if connection drops:
+    print error(s)
+    flash light
+    retry connection
+
+loop until we get a scan
+
+take scan's ID, put scan in DB as clock in (flask handles this)
+
+loop until we get another scan, etc...
+
+'''
+
 from mfrc522 import MFRC522
 from machine import Pin
 import network
@@ -8,10 +28,6 @@ import json
 
 reader = MFRC522(spi_id=0,sck=6,miso=4,mosi=7,cs=5,rst=22)
 LED = Pin("LED", Pin.OUT)
-
-def disconnect_service():
-    wlan.disconnect()
-    response.close()
 
 def flash_LED(num_flashes):
     for i in range(num_flashes):
@@ -31,17 +47,16 @@ PASSWORD = env.get("PASSWORD")
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
 
-try:
-    
-    wlan.connect(SSID, PASSWORD)
+wlan.connect(SSID, PASSWORD)
 
+try:
     while not wlan.isconnected():
         print('Attempting to Connect to WiFi...')
         LED.toggle()
         time.sleep(1)
 
     print('Connected! IP:', wlan.ifconfig()[0])
-    LED.toggle()
+    LED.off()
 
     print("Awaiting ID")
     print("")
@@ -61,11 +76,17 @@ try:
                 def try_connection():
                     print("sending request")
                     response = urequests.post(url)
-                    print("Response:", response.text,"\n")
+                    print("Response", response.text)
+                    return response.text
 
                 try:
-                    try_connection()
+                    output = try_connection()
                     flash_LED(2)
+                    #if card not found, try to input the card into the DB as a student
+                    if output == "RFID not found in database.":
+                        url = f"http://{env['SERVER_IP']}:{env['SERVER_PORT']}/enroll-rfid?rfid={rfid}"
+                        try_connection()
+                    
                 except Exception as e:
                     print("Error sending request:", e)
                     flash_LED(5)
@@ -82,5 +103,4 @@ finally:
     print("performing clean up...")
     wlan.disconnect()
     LED.off()
-    gc.collect()
     print("clean up OK.")

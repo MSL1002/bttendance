@@ -141,4 +141,4 @@ def test():
     return "Backend is running."
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    app.run(host='10.58.86.206', port=5000, threaded=True)

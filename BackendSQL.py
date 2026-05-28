@@ -120,7 +120,7 @@ def get_attendance(student_id=None, location=None, date=None):
         "SELECT u.first_name, u.last_name, u.student_id, "
         "s.timestamp, s.location "
         "FROM scans s "
-        "LEFT JOIN users u ON s.rfid_uid = u.rfid_uid"
+        "LEFT JOIN users u ON s.rfid_uid = u.rfid_uid "
     )
     conditions = []
     data = []
@@ -136,7 +136,7 @@ def get_attendance(student_id=None, location=None, date=None):
 
     if conditions:
         base += " WHERE " + " AND ".join(conditions)
-    base += " ORDER BY s.location, TIME(s.timestamp)"
+    base += " ORDER BY TIME(s.timestamp), s.location DESC"
 
     try:
         cnx = mysql.connector.connect(**env)
