@@ -136,7 +136,7 @@ def get_attendance(student_id=None, location=None, date=None):
 
     if conditions:
         base += " WHERE " + " AND ".join(conditions)
-    base += " ORDER BY TIME(s.timestamp), s.location DESC"
+    base += " ORDER BY s.location, s.timestamp DESC"
 
     try:
         cnx = mysql.connector.connect(**env)
