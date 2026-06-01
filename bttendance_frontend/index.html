@@ -15,14 +15,28 @@
     }
 
     header {
-      background: #1a1a2e;
-      color: #fff;
-      padding: 1rem 2rem;
+      background: #FCDD09;
+      color: #0c0c0c;
+      padding: 0 2rem;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 2rem;
     }
-    header h1 { font-size: 1.4rem; letter-spacing: 0.05em; }
+    header h1 { font-size: 1.4rem; letter-spacing: 0.05em; padding: 1rem 0; }
+
+    nav { display: flex; gap: 0; }
+    nav a {
+      display: block;
+      padding: 1.1rem 1.3rem;
+      color: #0c0c0c;
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 600;
+      border-bottom: 3px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    nav a:hover { color: #0c0c0c; }
+    nav a.active { color: #0c0c0c; border-bottom-color: #363636; }
 
     main {
       max-width: 1100px;
@@ -31,6 +45,9 @@
       display: grid;
       gap: 2rem;
     }
+
+    .page { display: none; }
+    .page.active { display: contents; }
 
     section {
       background: #fff;
@@ -110,7 +127,7 @@
       transition: opacity .15s;
     }
     button:hover { opacity: .85; }
-    .btn-primary { background: #4f6ef7; color: #fff; }
+    .btn-primary { background: #FCDD09; color: #fff; }
     .btn-secondary { background: #e8eaf0; color: #333; }
 
     .badge {
@@ -195,171 +212,231 @@
       font-size: .9rem;
       background: #fff;
     }
+
+    .table-scroll {
+      max-height: 360px;
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid #e8eaf0;
+      border-radius: 6px;
+    }
+    .table-scroll table { border-collapse: collapse; }
+    .table-scroll thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f4f6f9;
+    }
   </style>
 </head>
 <body>
 
 <header>
   <h1>bttendance</h1>
+  <nav>
+    <a href="#" class="active" data-page="home">Home</a>
+    <a href="#" data-page="manage">Manage</a>
+    <a href="#" data-page="analytics">Analytics</a>
+  </nav>
 </header>
 
 <main>
 
-  <!--  Enrolled Students  -->
-  <section>
-    <h2>Enrolled Students</h2>
-    <div class="controls">
-      <button class="btn-secondary" onclick="loadStudents()">Refresh</button>
-    </div>
-    <div id="students-wrap">
-      <p class="empty">Loading…</p>
-    </div>
-  </section>
+  <!-- ── Home Page ─────────────────────────────────────────────────────────── -->
+  <div class="page active" id="page-home">
 
-  <!--  Attendance  -->
-  <section>
-    <h2>Attendance Records</h2>
-    <div class="controls">
-      <label for="att-filter">Student ID:</label>
-      <input type="text" id="att-filter" placeholder="any" style="width:9rem" />
-      <label for="att-location">Location:</label>
-      <input type="text" id="att-location" placeholder="any" style="width:9rem" />
-      <label for="att-date">Date:</label>
-      <input type="date" id="att-date" />
-      <button class="btn-primary" onclick="loadAttendance()">Search</button>
-      <button class="btn-secondary" onclick="clearAttendanceFilters()">Clear</button>
-    </div>
-    <div id="attendance-wrap">
-      <p class="empty">Loading…</p>
-    </div>
-  </section>
+    <section>
+      <h2>Enrolled Students</h2>
+      <div class="controls">
+        <button class="btn-secondary" onclick="loadStudents()">Refresh</button>
+      </div>
+      <div id="students-wrap">
+        <p class="empty">Loading…</p>
+      </div>
+    </section>
 
-  <!-- Create Student -->
-  <section>
-    <h2>Create Student</h2>
-    <form id="create-form" onsubmit="startRfidEnrollment(event)">
-      <div class="fields">
-        <div>
-          <label for="c-fname">First Name</label>
-          <input id="c-fname" type="text" placeholder="Jane" required />
-        </div>
-        <div>
-          <label for="c-lname">Last Name</label>
-          <input id="c-lname" type="text" placeholder="Doe" required />
-        </div>
-        <div>
-          <label for="c-id">Student ID</label>
-          <input id="c-id" type="text" placeholder="12345" required />
-        </div>
+    <section>
+      <h2>Attendance Records</h2>
+      <div class="controls">
+        <label for="att-filter">Student ID:</label>
+        <input type="text" id="att-filter" placeholder="any" style="width:9rem" />
+        <label for="att-location">Location:</label>
+        <input type="text" id="att-location" placeholder="any" style="width:9rem" />
+        <label for="att-date">Date:</label>
+        <input type="date" id="att-date" />
+        <button class="btn-primary" onclick="loadAttendance()">Search</button>
+        <button class="btn-secondary" onclick="clearAttendanceFilters()">Clear</button>
       </div>
-      <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
-        <button type="submit" class="btn-primary" id="enroll-btn">Add Student</button>
-        <button type="button" class="btn-secondary" id="cancel-btn" style="display:none" onclick="cancelEnrollment()">Cancel</button>
+      <div id="attendance-wrap">
+        <p class="empty">Loading…</p>
       </div>
-      <p id="enroll-status" style="margin-top:.75rem;font-size:.9rem;color:#555;"></p>
-    </form>
-  </section>
+    </section>
 
-  <!--  Remove Student  -->
-  <section>
-    <h2>Remove Student</h2>
-    <form id="delete-form" onsubmit="deleteStudent(event)">
-      <div class="fields">
-        <div>
-          <label for="d-id">Student ID</label>
-          <input id="d-id" type="text" placeholder="12345" required />
-        </div>
-      </div>
-      <button type="submit" class="btn-primary" style="background:#ef4444">Remove Student</button>
-    </form>
-  </section>
+  </div>
 
-  <!-- Manage Instructors -->
-  <section>
-    <h2>Manage Instructors</h2>
-    <div id="instructors-wrap"><p class="empty">Loading…</p></div>
-    <form id="add-instructor-form" onsubmit="addInstructor(event)" style="margin-top:1.25rem;padding-top:1rem;border-top:2px solid #e8eaf0">
-      <p style="font-size:.88rem;font-weight:600;color:#555;margin-bottom:.75rem">Add Instructor</p>
-      <div class="fields">
-        <div>
-          <label for="i-fname">First Name</label>
-          <input id="i-fname" type="text" placeholder="Jane" required />
-        </div>
-        <div>
-          <label for="i-lname">Last Name</label>
-          <input id="i-lname" type="text" placeholder="Doe" required />
-        </div>
-      </div>
-      <button type="submit" class="btn-primary">Add Instructor</button>
-    </form>
-  </section>
+  <!-- ── Manage Page ────────────────────────────────────────────────────────── -->
+  <div class="page" id="page-manage">
 
-  <!-- Manage Classes -->
-  <section>
-    <h2>Manage Classes</h2>
-    <div id="classes-wrap"><p class="empty">Loading…</p></div>
-    <form id="add-class-form" onsubmit="addClass(event)" style="margin-top:1.25rem;padding-top:1rem;border-top:2px solid #e8eaf0">
-      <p style="font-size:.88rem;font-weight:600;color:#555;margin-bottom:.75rem">Add Class</p>
-      <div class="fields">
-        <div>
-          <label for="cl-name">Class Name</label>
-          <input id="cl-name" type="text" placeholder="Math 101" required />
+    <section>
+      <h2>Create Student</h2>
+      <form id="create-form" onsubmit="startRfidEnrollment(event)">
+        <div class="fields">
+          <div>
+            <label for="c-fname">First Name</label>
+            <input id="c-fname" type="text" placeholder="Jane" required />
+          </div>
+          <div>
+            <label for="c-lname">Last Name</label>
+            <input id="c-lname" type="text" placeholder="Doe" required />
+          </div>
+          <div>
+            <label for="c-id">Student ID</label>
+            <input id="c-id" type="text" placeholder="12345" required />
+          </div>
         </div>
-        <div>
-          <label for="cl-instructor">Instructor</label>
-          <select id="cl-instructor" required></select>
+        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+          <button type="submit" class="btn-primary" id="enroll-btn">Add Student</button>
+          <button type="button" class="btn-secondary" id="cancel-btn" style="display:none" onclick="cancelEnrollment()">Cancel</button>
         </div>
-        <div>
-          <label for="cl-location">Location / Room</label>
-          <input id="cl-location" type="text" placeholder="Room A" required />
-        </div>
-        <div>
-          <label for="cl-start-time">Start Time</label>
-          <input id="cl-start-time" type="time" required />
-        </div>
-        <div>
-          <label for="cl-end-time">End Time</label>
-          <input id="cl-end-time" type="time" required />
-        </div>
-        <div>
-          <label for="cl-start-date">Start Date</label>
-          <input id="cl-start-date" type="date" required />
-        </div>
-        <div>
-          <label for="cl-end-date">End Date</label>
-          <input id="cl-end-date" type="date" required />
-        </div>
-      </div>
-      <div style="margin-bottom:.85rem">
-        <label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:.4rem">Days of Week</label>
-        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-          <label class="day-check"><input type="checkbox" value="M" />Mon</label>
-          <label class="day-check"><input type="checkbox" value="T" />Tue</label>
-          <label class="day-check"><input type="checkbox" value="W" />Wed</label>
-          <label class="day-check"><input type="checkbox" value="R" />Thu</label>
-          <label class="day-check"><input type="checkbox" value="F" />Fri</label>
-          <label class="day-check"><input type="checkbox" value="S" />Sat</label>
-          <label class="day-check"><input type="checkbox" value="U" />Sun</label>
-        </div>
-      </div>
-      <button type="submit" class="btn-primary">Add Class</button>
-    </form>
-  </section>
+        <p id="enroll-status" style="margin-top:.75rem;font-size:.9rem;color:#555;"></p>
+      </form>
+    </section>
 
-  <!-- Analytics -->
-  <section>
-    <h2>Attendance Analytics</h2>
-    <div class="controls">
-      <button class="btn-primary" onclick="loadAnalytics()">Refresh Analytics</button>
-    </div>
-    <div id="analytics-wrap"><p class="empty">Click Refresh Analytics to load.</p></div>
-  </section>
+    <section>
+      <h2>Remove Student</h2>
+      <form id="delete-form" onsubmit="deleteStudent(event)">
+        <div class="fields">
+          <div>
+            <label for="d-id">Student ID</label>
+            <input id="d-id" type="text" placeholder="12345" required />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" style="background:#ef4444">Remove Student</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Manage Instructors</h2>
+      <div id="instructors-wrap"><p class="empty">Loading…</p></div>
+      <form id="add-instructor-form" onsubmit="addInstructor(event)" style="margin-top:1.25rem;padding-top:1rem;border-top:2px solid #e8eaf0">
+        <p style="font-size:.88rem;font-weight:600;color:#555;margin-bottom:.75rem">Add Instructor</p>
+        <div class="fields">
+          <div>
+            <label for="i-fname">First Name</label>
+            <input id="i-fname" type="text" placeholder="Jane" required />
+          </div>
+          <div>
+            <label for="i-lname">Last Name</label>
+            <input id="i-lname" type="text" placeholder="Doe" required />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Add Instructor</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Manage Classes</h2>
+      <div id="classes-wrap"><p class="empty">Loading…</p></div>
+      <form id="add-class-form" onsubmit="addClass(event)" style="margin-top:1.25rem;padding-top:1rem;border-top:2px solid #e8eaf0">
+        <p style="font-size:.88rem;font-weight:600;color:#555;margin-bottom:.75rem">Add Class</p>
+        <div class="fields">
+          <div>
+            <label for="cl-name">Class Name</label>
+            <input id="cl-name" type="text" placeholder="Math 101" required />
+          </div>
+          <div>
+            <label for="cl-instructor">Instructor</label>
+            <select id="cl-instructor" required></select>
+          </div>
+          <div>
+            <label for="cl-location">Location / Room</label>
+            <input id="cl-location" type="text" placeholder="Room A" required />
+          </div>
+          <div>
+            <label for="cl-start-time">Start Time</label>
+            <input id="cl-start-time" type="time" required />
+          </div>
+          <div>
+            <label for="cl-end-time">End Time</label>
+            <input id="cl-end-time" type="time" required />
+          </div>
+          <div>
+            <label for="cl-start-date">Start Date</label>
+            <input id="cl-start-date" type="date" required />
+          </div>
+          <div>
+            <label for="cl-end-date">End Date</label>
+            <input id="cl-end-date" type="date" required />
+          </div>
+        </div>
+        <div style="margin-bottom:.85rem">
+          <label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:.4rem">Days of Week</label>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <label class="day-check"><input type="checkbox" value="M" />Mon</label>
+            <label class="day-check"><input type="checkbox" value="T" />Tue</label>
+            <label class="day-check"><input type="checkbox" value="W" />Wed</label>
+            <label class="day-check"><input type="checkbox" value="R" />Thu</label>
+            <label class="day-check"><input type="checkbox" value="F" />Fri</label>
+            <label class="day-check"><input type="checkbox" value="S" />Sat</label>
+            <label class="day-check"><input type="checkbox" value="U" />Sun</label>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Add Class</button>
+      </form>
+    </section>
+
+  </div>
+
+  <!-- ── Analytics Page ────────────────────────────────────────────────────── -->
+  <div class="page" id="page-analytics">
+
+    <section>
+      <h2>Attendance Analytics</h2>
+      <div class="controls">
+        <button class="btn-primary" onclick="loadAnalytics()">Refresh Analytics</button>
+      </div>
+      <div id="analytics-wrap"><p class="empty">Click Refresh Analytics to load.</p></div>
+    </section>
+
+  </div>
 
 </main>
 
 <div id="toast"></div>
 
 <script>
+  // ─── Navigation ───────────────────────────────────────────────────────────
+
+  const _pageLoaded = { home: false, manage: false, analytics: false };
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.querySelector(`nav a[data-page="${name}"]`).classList.add('active');
+
+    if (!_pageLoaded[name]) {
+      _pageLoaded[name] = true;
+      if (name === 'home') {
+        loadStudents();
+        loadAttendance();
+      } else if (name === 'manage') {
+        loadInstructors();
+        loadClassInstructorOptions();
+        loadClasses();
+      }
+    }
+  }
+
+  document.querySelectorAll('nav a').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      showPage(a.dataset.page);
+    });
+  });
+
+  // ─── Toast ────────────────────────────────────────────────────────────────
+
   function toast(msg, ok = true) {
     const el = document.getElementById('toast');
     el.textContent = msg;
@@ -368,6 +445,8 @@
     el._t = setTimeout(() => el.className = '', 2800);
   }
 
+  // ─── Students ─────────────────────────────────────────────────────────────
+
   function renderStudents(students) {
     const wrap = document.getElementById('students-wrap');
     if (!students.length) {
@@ -375,42 +454,22 @@
       return;
     }
     wrap.innerHTML = `
-      <table>
-        <thead><tr>
-          <th>Student ID</th><th>First Name</th><th>Last Name</th>
-          <th>RFID UID</th><th>Enrolled</th>
-        </tr></thead>
-        <tbody>${students.map(s => `
-          <tr>
-            <td>${s.student_id ?? '—'}</td>
-            <td>${s.first_name}</td>
-            <td>${s.last_name}</td>
-            <td style="font-family:monospace;font-size:.82rem">${s.rfid_uid}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
-  }
-
-  function renderAttendance(records) {
-    const wrap = document.getElementById('attendance-wrap');
-    if (!records.length) {
-      wrap.innerHTML = '<p class="empty">No records found.</p>';
-      return;
-    }
-    wrap.innerHTML = `
-      <table>
-        <thead><tr>
-          <th>Student ID</th><th>Name</th><th>Location</th><th>Timestamp</th>
-        </tr></thead>
-        <tbody>${records.map(r => `
-          <tr>
-            <td>${r.student_id ?? '—'}</td>
-            <td>${r.first_name ? r.first_name + ' ' + r.last_name : '—'}</td>
-            <td>${r.location ?? '—'}</td>
-            <td>${r.timestamp ?? '—'}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Student ID</th><th>First Name</th><th>Last Name</th>
+            <th>RFID UID</th>
+          </tr></thead>
+          <tbody>${students.map(s => `
+            <tr>
+              <td>${s.student_id ?? '—'}</td>
+              <td>${s.first_name}</td>
+              <td>${s.last_name}</td>
+              <td style="font-family:monospace;font-size:.82rem">${s.rfid_uid}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
   }
 
   async function loadStudents() {
@@ -422,6 +481,32 @@
     } catch {
       document.getElementById('students-wrap').innerHTML = '<p class="empty">Failed to load students.</p>';
     }
+  }
+
+  // ─── Attendance ───────────────────────────────────────────────────────────
+
+  function renderAttendance(records) {
+    const wrap = document.getElementById('attendance-wrap');
+    if (!records.length) {
+      wrap.innerHTML = '<p class="empty">No records found.</p>';
+      return;
+    }
+    wrap.innerHTML = `
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Student ID</th><th>Name</th><th>Location</th><th>Timestamp</th>
+          </tr></thead>
+          <tbody>${records.map(r => `
+            <tr>
+              <td>${r.student_id ?? '—'}</td>
+              <td>${r.first_name ? r.first_name + ' ' + r.last_name : '—'}</td>
+              <td>${r.location ?? '—'}</td>
+              <td>${r.timestamp ?? '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
   }
 
   function clearAttendanceFilters() {
@@ -450,6 +535,8 @@
     }
   }
 
+  // ─── Create / Remove Student ──────────────────────────────────────────────
+
   async function deleteStudent(e) {
     e.preventDefault();
     const id = document.getElementById('d-id').value.trim();
@@ -458,7 +545,7 @@
       if (res.ok) {
         toast('Student removed.');
         document.getElementById('delete-form').reset();
-        loadStudents();
+        _pageLoaded.home = false;
       } else if (res.status === 404) {
         toast('No student found with that ID.', false);
       } else {
@@ -531,7 +618,8 @@
         toast('Student enrolled successfully.');
         status.textContent = '';
         document.getElementById('create-form').reset();
-        loadStudents();
+        _pageLoaded.home = false;
+        loadClasses();
       } else if (event.data === 'timeout') {
         status.textContent = 'Timed out — no card scanned within 2 minutes.';
         toast('Enrollment timed out.', false);
@@ -551,9 +639,6 @@
     };
   }
 
-  loadStudents();
-  loadAttendance();
-
   // ─── Instructors ──────────────────────────────────────────────────────────
 
   async function loadInstructors() {
@@ -566,17 +651,19 @@
         return;
       }
       wrap.innerHTML = `
-        <table>
-          <thead><tr><th>Name</th><th></th></tr></thead>
-          <tbody>${data.map(i => `
-            <tr>
-              <td>${i.first_name} ${i.last_name}</td>
-              <td><button class="btn-secondary"
-                    style="padding:.25rem .6rem;font-size:.8rem;background:#fee2e2;color:#991b1b"
-                    onclick="deleteInstructor(${i.id})">Remove</button></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`;
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Name</th><th></th></tr></thead>
+            <tbody>${data.map(i => `
+              <tr>
+                <td>${i.first_name} ${i.last_name}</td>
+                <td><button class="btn-secondary"
+                      style="padding:.25rem .6rem;font-size:.8rem;background:#fee2e2;color:#991b1b"
+                      onclick="deleteInstructor(${i.id})">Remove</button></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
     } catch {
       wrap.innerHTML = '<p class="empty">Failed to load instructors.</p>';
     }
@@ -635,7 +722,7 @@
         return;
       }
       wrap.innerHTML = `
-        <div style="overflow-x:auto">
+        <div class="table-scroll">
         <table id="classes-table">
           <thead><tr>
             <th>Class</th><th>Instructor</th><th>Location</th>
@@ -801,6 +888,13 @@
 
   // ─── Analytics ────────────────────────────────────────────────────────────
 
+  let _analyticsData = null;
+  const _aSort = {
+    byClass:      { col: 'attendance_rate', dir: -1 },
+    byInstructor: { col: 'attendance_rate', dir: -1 },
+    byTime:       { col: 'attendance_rate', dir: -1 },
+  };
+
   function rateBadge(rate) {
     if (rate === null || rate === undefined)
       return '<span class="rate-na">N/A</span>';
@@ -809,71 +903,127 @@
     return `<span class="rate-badge ${cls}">${pct}</span>`;
   }
 
+  function _sortArr(arr, col, dir) {
+    return [...arr].sort((a, b) => {
+      const av = a[col], bv = b[col];
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      return typeof av === 'string' ? dir * av.localeCompare(bv) : dir * (av - bv);
+    });
+  }
+
+  function _th(key, col, label) {
+    const s = _aSort[key];
+    const arrow = s.col === col ? (s.dir === 1 ? ' ↑' : ' ↓') : '';
+    return `<th style="cursor:pointer;user-select:none;white-space:nowrap"
+               onclick="sortAnalytics('${key}','${col}')">${label}${arrow}</th>`;
+  }
+
+  function sortAnalytics(key, col) {
+    if (_aSort[key].col === col) {
+      _aSort[key].dir *= -1;
+    } else {
+      _aSort[key].col = col;
+      _aSort[key].dir = -1;
+    }
+    renderAnalyticsTables();
+  }
+
+  function renderAnalyticsTables() {
+    if (!_analyticsData) return;
+    const { by_class, by_instructor, by_time } = _analyticsData;
+    const wrap = document.getElementById('analytics-wrap');
+
+    const sc = _aSort.byClass;
+    const sortedClass = _sortArr(by_class, sc.col, sc.dir);
+
+    const si = _aSort.byInstructor;
+    const sortedInstructor = _sortArr(by_instructor, si.col, si.dir);
+
+    const st = _aSort.byTime;
+    const sortedTime = _sortArr(by_time, st.col, st.dir);
+
+    wrap.innerHTML = `
+      <p style="font-size:.95rem;font-weight:600;margin-bottom:.75rem">By Class</p>
+      ${sortedClass.length === 0
+        ? '<p class="empty">No classes configured yet.</p>'
+        : `<div class="table-scroll"><table>
+             <thead><tr>
+               ${_th('byClass','class_name','Class')}
+               ${_th('byClass','instructor','Instructor')}
+               ${_th('byClass','location','Location')}
+               ${_th('byClass','schedule','Schedule')}
+               ${_th('byClass','enrolled','Enrolled')}
+               ${_th('byClass','sessions_held','Sessions')}
+               ${_th('byClass','attended_student_sessions','Attended')}
+               ${_th('byClass','attendance_rate','Rate')}
+             </tr></thead>
+             <tbody>${sortedClass.map(c => `
+               <tr>
+                 <td>${c.class_name}</td>
+                 <td>${c.instructor}</td>
+                 <td>${c.location}</td>
+                 <td style="white-space:nowrap">${c.schedule}</td>
+                 <td>${c.enrolled}</td>
+                 <td>${c.sessions_held}</td>
+                 <td>${c.attended_student_sessions}</td>
+                 <td>${rateBadge(c.attendance_rate)}</td>
+               </tr>`).join('')}
+             </tbody>
+           </table></div>`}
+
+      <p style="font-size:.95rem;font-weight:600;margin:1.5rem 0 .75rem">By Instructor</p>
+      ${sortedInstructor.length === 0
+        ? '<p class="empty">No instructors yet.</p>'
+        : `<div class="table-scroll"><table>
+             <thead><tr>
+               ${_th('byInstructor','instructor','Instructor')}
+               ${_th('byInstructor','classes','Classes')}
+               ${_th('byInstructor','attendance_rate','Overall Rate')}
+             </tr></thead>
+             <tbody>${sortedInstructor.map(i => `
+               <tr>
+                 <td>${i.instructor}</td>
+                 <td>${i.classes}</td>
+                 <td>${rateBadge(i.attendance_rate)}</td>
+               </tr>`).join('')}
+             </tbody>
+           </table></div>`}
+
+      <p style="font-size:.95rem;font-weight:600;margin:1.5rem 0 .75rem">By Time of Day
+        <span style="font-weight:400;font-size:.82rem;color:#888;margin-left:.5rem">Morning 8–11AM · Afternoon 1–4PM · Night 5–8PM</span>
+      </p>
+      <div class="table-scroll"><table>
+        <thead><tr>
+          ${_th('byTime','slot','Time Slot')}
+          ${_th('byTime','classes','Classes')}
+          ${_th('byTime','attendance_rate','Overall Rate')}
+        </tr></thead>
+        <tbody>${sortedTime.map(t => `
+          <tr>
+            <td>${t.slot}</td>
+            <td>${t.classes}</td>
+            <td>${rateBadge(t.attendance_rate)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`;
+  }
+
   async function loadAnalytics() {
     const wrap = document.getElementById('analytics-wrap');
     wrap.innerHTML = '<p class="empty">Loading…</p>';
     try {
-      const data = await fetch('/get-analytics').then(r => r.json());
-
-      const byClass = [...data.by_class].sort((a, b) => {
-        if (a.attendance_rate === null && b.attendance_rate === null) return 0;
-        if (a.attendance_rate === null) return 1;
-        if (b.attendance_rate === null) return -1;
-        return b.attendance_rate - a.attendance_rate;
-      });
-
-      wrap.innerHTML = `
-        <p style="font-size:.95rem;font-weight:600;margin-bottom:.75rem">By Class
-          <span style="font-weight:400;font-size:.82rem;color:#888;margin-left:.5rem">sorted best → worst</span>
-        </p>
-        ${byClass.length === 0
-          ? '<p class="empty">No classes configured yet.</p>'
-          : `<div style="overflow-x:auto">
-             <table>
-               <thead><tr>
-                 <th>Class</th><th>Instructor</th><th>Location</th><th>Schedule</th>
-                 <th>Enrolled</th><th>Sessions</th>
-                 <th>Attended<br><span style="font-weight:400;font-size:.75rem">student-sessions</span></th>
-                 <th>Rate</th>
-               </tr></thead>
-               <tbody>${byClass.map(c => `
-                 <tr>
-                   <td>${c.class_name}</td>
-                   <td>${c.instructor}</td>
-                   <td>${c.location}</td>
-                   <td style="white-space:nowrap">${c.schedule}</td>
-                   <td>${c.enrolled}</td>
-                   <td>${c.sessions_held}</td>
-                   <td>${c.attended_student_sessions}</td>
-                   <td>${rateBadge(c.attendance_rate)}</td>
-                 </tr>`).join('')}
-               </tbody>
-             </table>
-             </div>`}
-
-        <p style="font-size:.95rem;font-weight:600;margin:1.5rem 0 .75rem">By Instructor</p>
-        ${data.by_instructor.length === 0
-          ? '<p class="empty">No instructors yet.</p>'
-          : `<div style="overflow-x:auto">
-             <table>
-               <thead><tr><th>Instructor</th><th>Classes</th><th>Overall Rate</th></tr></thead>
-               <tbody>${data.by_instructor.map(i => `
-                 <tr>
-                   <td>${i.instructor}</td>
-                   <td>${i.classes}</td>
-                   <td>${rateBadge(i.attendance_rate)}</td>
-                 </tr>`).join('')}
-               </tbody>
-             </table>
-             </div>`}`;
+      _analyticsData = await fetch('/get-analytics').then(r => r.json());
+      renderAnalyticsTables();
     } catch {
       wrap.innerHTML = '<p class="empty">Failed to load analytics.</p>';
     }
   }
 
-  loadInstructors();
-  loadClassInstructorOptions();
-  loadClasses();
+  // ─── Init ─────────────────────────────────────────────────────────────────
+
+  showPage('home');
 </script>
 </body>
 </html>

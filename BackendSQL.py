@@ -12,24 +12,31 @@ except json.decoder.JSONDecodeError as e:
     exit()
 
 def log_attendance(rfid, location):
-    query = ("INSERT INTO scans "
-            "(rfid_uid, timestamp, location)"
-            "VALUES(%s, %s, %s)"
-            )
-    data_vals = (rfid, datetime.datetime.now(), location)
-
     try:
         cnx = mysql.connector.connect(**env)
         cursor = cnx.cursor()
-        cursor.execute(query, data_vals)
 
+        cursor.execute(
+            "SELECT 1 FROM scans WHERE rfid_uid = %s "
+            "AND timestamp > NOW() - INTERVAL 30 SECOND LIMIT 1",
+            (rfid,)
+        )
+        if cursor.fetchone():
+            print("Duplicate scan ignored (within 30s).")
+            cursor.close()
+            cnx.close()
+            return
+
+        cursor.execute(
+            "INSERT INTO scans (rfid_uid, timestamp, location) VALUES (%s, NOW(), %s)",
+            (rfid, location)
+        )
         cnx.commit()
-
         print("attendance log success.")
 
         cursor.close()
         cnx.close()
-        
+
     except mysql.connector.Error as err:
         print("Insert failed.")
         print(err)
@@ -140,6 +147,18 @@ def _td_to_time(val):
         return datetime.time(s // 3600, (s % 3600) // 60, s % 60)
     return val
 
+_TIME_SLOTS = [
+    ('Morning',   datetime.time(8,  0), datetime.time(11, 59)),
+    ('Afternoon', datetime.time(13, 0), datetime.time(16, 59)),
+    ('Night',     datetime.time(17, 0), datetime.time(20,  0)),
+]
+
+def _time_slot(t):
+    for label, start, end in _TIME_SLOTS:
+        if start <= t <= end:
+            return label
+    return None
+
 def get_all_instructors():
     try:
         cnx = mysql.connector.connect(**env)
@@ -187,10 +206,10 @@ def get_all_classes():
         cursor = cnx.cursor(dictionary=True)
         cursor.execute("""
             SELECT c.id, c.name, c.location, c.days_of_week,
-                   c.start_time, c.end_time, c.start_date, c.end_date,
-                   i.id as instructor_id,
-                   CONCAT(i.first_name, ' ', i.last_name) as instructor,
-                   COUNT(ce.user_id) as enrolled_count
+                c.start_time, c.end_time, c.start_date, c.end_date,
+                i.id as instructor_id,
+                CONCAT(i.first_name, ' ', i.last_name) as instructor,
+                COUNT(ce.user_id) as enrolled_count
             FROM classes c
             JOIN instructors i ON c.instructor_id = i.id
             LEFT JOIN class_enrollments ce ON ce.class_id = c.id
@@ -315,6 +334,8 @@ def get_analytics():
 
         by_class = []
         instructor_totals = {}
+        time_totals = {label: {'label': label, 'classes': 0, 'total_attended': 0, 'total_possible': 0}
+                       for label, _, __ in _TIME_SLOTS}
 
         for cls in classes:
             days_str = cls['days_of_week']
@@ -335,9 +356,9 @@ def get_analytics():
                         JOIN users u ON s.rfid_uid = u.rfid_uid
                         JOIN class_enrollments ce ON ce.user_id = u.id AND ce.class_id = %s
                         WHERE s.location = %s
-                          AND TIME(s.timestamp) BETWEEN %s AND %s
-                          AND DATE(s.timestamp) BETWEEN %s AND LEAST(%s, CURDATE())
-                          AND DAYOFWEEK(s.timestamp) IN ({ph})""",
+                        AND TIME(s.timestamp) BETWEEN %s AND %s
+                        AND DATE(s.timestamp) BETWEEN %s AND LEAST(%s, CURDATE())
+                        AND DAYOFWEEK(s.timestamp) IN ({ph})""",
                     [cls['id'], cls['location'], start_t, end_t, start_d, end_d] + dow_list
                 )
                 row = cursor.fetchone()
@@ -372,6 +393,12 @@ def get_analytics():
             instructor_totals[iid]['total_attended']  += attended
             instructor_totals[iid]['total_possible']  += total_possible
 
+            slot = _time_slot(start_t)
+            if slot:
+                time_totals[slot]['classes']        += 1
+                time_totals[slot]['total_attended']  += attended
+                time_totals[slot]['total_possible']  += total_possible
+
         by_instructor = []
         for stats in instructor_totals.values():
             tp = stats['total_possible']
@@ -383,9 +410,19 @@ def get_analytics():
             })
         by_instructor.sort(key=lambda x: (x['attendance_rate'] is None, -(x['attendance_rate'] or 0)))
 
+        by_time = []
+        for label, *_ in _TIME_SLOTS:
+            s = time_totals[label]
+            tp = s['total_possible']
+            by_time.append({
+                'slot':            label,
+                'classes':         s['classes'],
+                'attendance_rate': round(s['total_attended'] / tp, 4) if tp > 0 else None,
+            })
+
         cursor.close()
         cnx.close()
-        return {'by_class': by_class, 'by_instructor': by_instructor}
+        return {'by_class': by_class, 'by_instructor': by_instructor, 'by_time': by_time}
 
     except mysql.connector.Error as err:
         print(err)
@@ -412,7 +449,7 @@ def get_attendance(student_id=None, location=None, date=None):
 
     if conditions:
         base += " WHERE " + " AND ".join(conditions)
-    base += " ORDER BY s.location, s.timestamp DESC"
+    base += " ORDER BY s.timestamp DESC"
 
     try:
         cnx = mysql.connector.connect(**env)
