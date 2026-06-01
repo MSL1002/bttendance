@@ -237,7 +237,7 @@
   <!-- Create Student -->
   <section>
     <h2>Create Student</h2>
-    <form id="create-form" onsubmit="enrollStudent(event)">
+    <form id="create-form" onsubmit="startRfidEnrollment(event)">
       <div class="fields">
         <div>
           <label for="c-fname">First Name</label>
@@ -481,7 +481,7 @@
     document.getElementById('enroll-status').textContent = '';
   }
 
-  async function enrollStudent(e) {
+  async function startRfidEnrollment(e) {
     e.preventDefault();
 
     if (_activeEnrollment) {
