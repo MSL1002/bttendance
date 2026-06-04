@@ -6,16 +6,16 @@
 
 ## Project Description
 
-Bttendance is an automated attendance tracking system designed to streamline classroom management and reduce administrative burden on instructors. The system utilizes RFID card scanning technology to automatically log student attendance, eliminating the need for manual quizzes or roll calls.
-
-Students simply scan their RFID identification card at a reader positioned near the classroom entrance, and their attendance is instantly recorded in a centralized database. The system was developed specifically for Neumont University but is architected to be adaptable to other organizational environments.
+Bttendance is an automated attendance tracking system designed to reduce administrative burden on instructors. Students scan their RFID identification card at a reader near the classroom entrance, and their attendance is instantly recorded in a centralized MySQL database. The system was developed for Neumont University.
 
 ### Key Features
 
-- **Instant Attendance Logging:** RFID cards are scanned and logged to the database in real-time
-- **Automated Data Storage:** All attendance records are automatically persisted to a MySQL database with timestamps
-- **WiFi Connectivity:** Pico W microcontroller transmits scan data wirelessly to a backend server
-- **Unknown Card Detection:** System identifies and logs unknown or unregistered RFID cards
+- **Instant Attendance Logging:** RFID scans are logged to the database in real-time with duplicate detection (30-second window)
+- **Web Dashboard:** Single-page frontend served by the Flask backend for viewing attendance, managing students, instructors, and classes
+- **WiFi Connectivity:** Pico W microcontroller transmits scan data wirelessly to the backend server
+- **Unknown Card Handling:** Unregistered RFID cards are flagged; new students can be enrolled through the web UI
+- **Analytics:** Attendance analytics available through the dashboard
+
 ---
 
 ## Team Members
@@ -27,104 +27,95 @@ Students simply scan their RFID identification card at a reader positioned near 
 ## Technologies Used
 
 ### Languages
-- **Python 3** - Backend server and API development
-- **MicroPython** - Pico W microcontroller firmware and application logic
+- **Python 3** - Backend server, API, and database logic
+- **MicroPython** - Pico W firmware
 - **SQL** - Database schema and queries
+- **HTML/CSS/JavaScript** - Single-page web frontend
 
 ### Hardware
 - **Raspberry Pi Pico W** - WiFi-enabled microcontroller managing RFID scanning and data transmission
-- **RC522 RFID Reader Module** - 13.56MHz RFID card/fob detection and UID reading
-- **RFID Cards/Tags** - Student identification tokens compatible with RC522 standard
+- **RC522 RFID Reader Module** - 13.56MHz RFID card detection and UID reading
+- **RFID Cards/Tags** - Student identification tokens compatible with RC522
 
 ### Software & Frameworks
-- **MicroPython** - Runtime environment for Pico W
-- **mfrc522.py** - RFID reader library for SPI communication
-- **urequests** - MicroPython HTTP client for backend communication
-- **Flask** - Python web framework for REST API endpoints
-- **MySQL** - Relational database for attendance record storage
-- **MySQL Connector/Python** - Python database driver for MySQL connectivity
+- **Flask** - REST API and static file serving
+- **MySQL** - Relational database for attendance records
+- **MySQL Connector/Python** - Python database driver
+- **mfrc522-python** - RFID reader library
+- **urequests** - MicroPython HTTP client
 
-### Development Tools
-- **Visual Studio Code** - IDE
-- **Pico-W-Go Extension** - VS Code extension for Pico W code management
-- **Git & GitHub** - Version control and repository management
+---
+
+## Project Structure
+
+```
+bttendance/
+├── app.py                    # Flask server — API endpoints and frontend serving
+├── BackendSQL.py             # All database operations
+├── config.json               # MySQL connection credentials (not committed)
+├── requirements.txt          # Python dependencies
+├── bttendance_frontend/
+│   └── index.html            # Web dashboard (single-page app)
+└── bttendance_pico/
+    ├── main.py               # RFID scan loop and WiFi logic
+    ├── mfrc522.py            # RFID reader library for SPI
+    ├── new_student.py        # Student enrollment flow
+    ├── env.json              # Pico WiFi and server config (not committed)
+    └── test_backend.py       # Backend connectivity test
+```
+
 ---
 
 ## Installation & Setup
 
 ### Prerequisites
 
-Before beginning, ensure you have the following:
-
-- **Hardware:** Raspberry Pi Pico W, RC522 RFID reader, RFID cards (13.56MHz), jumper wires, USB micro-cable, power adapter
-- **Software:** Python 3.8+, pip, Git
-- **Network:** WiFi network with WPA2 security
-- **System:** Windows with administrator access
-
-### Hardware Setup
-
-#### Step 1: Wire the RC522 RFID Module
-
-Connect the RC522 module to the Raspberry Pi Pico W
-
-#### Step 2: Flash MicroPython Firmware
-
-1. Download MicroPython firmware for Pico W: https://micropython.org/download/rp2-pico-w/
-2. Hold **BOOTSEL** button on Pico W while connecting via USB
-3. Device will appear as `RPI-RP2` storage
-4. Drag and drop the `.uf2` firmware file onto the storage device
-5. Pico W will reboot automatically
+- **Hardware:** Raspberry Pi Pico W, RC522 RFID reader, RFID cards (13.56MHz), jumper wires, USB micro-cable
+- **Software:** Python 3.8+, pip, Git, MySQL Server
+- **Network:** WiFi network the Pico W can connect to
 
 ---
 
-### Backend Server Setup
-
-#### Step 1: Clone Repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/MSL1002/bttendance.git
 cd bttendance
 ```
 
-#### Step 2: Set Up Python Virtual Environment
+---
+
+### 2. Set Up the Python Backend
+
+#### Create and activate a virtual environment
 
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-You should see `(venv)` at the beginning of your terminal prompt.
-
-#### Step 3: Install Backend Dependencies
+#### Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-The `requirements.txt` should contain:
-```
-Flask
-mysql-connector-python
-python-dotenv
-```
+Dependencies: `Flask`, `mysql-connector-python`, `python-dotenv`, `mfrc522-python`
 
-#### Step 4: Install MySQL Database
+---
 
-Download and install MySQL from: https://dev.mysql.com/downloads/mysql/
+### 3. Set Up MySQL
 
-Follow the installation wizard for your operating system.
+Install MySQL Server if you haven't already: https://dev.mysql.com/downloads/mysql/
 
-#### Step 5: Create Database and Tables
-
-Open MySQL CLI or MySQL Workbench and execute the following:
+Open MySQL CLI or MySQL Workbench and run:
 
 ```sql
 CREATE DATABASE bttendance;
 USE bttendance;
 
 CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    rfid_uid VARCHAR(255) NOT NULL UNIQUE,
+    rfid_uid VARCHAR(255) NOT NULL PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     student_id VARCHAR(50),
@@ -135,80 +126,118 @@ CREATE TABLE scans (
     id INT AUTO_INCREMENT PRIMARY KEY,
     rfid_uid VARCHAR(255) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    location VARCHAR(100),
-    status ENUM('success', 'unknown_card', 'error') DEFAULT 'success',
-    FOREIGN KEY (rfid_uid) REFERENCES users(rfid_uid)
+    location VARCHAR(100)
 );
 
-CREATE INDEX idx_rfid_uid ON users(rfid_uid);
-CREATE INDEX idx_scan_timestamp ON scans(timestamp);
-CREATE INDEX idx_scan_location ON scans(location);
+CREATE TABLE instructors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(255)
+);
 
-CREATE USER 'bttendance_user'@'localhost' IDENTIFIED BY 'secure_password';
-GRANT ALL PRIVILEGES ON bttendance.* TO 'bttendance_user'@'localhost';
-FLUSH PRIVILEGES;
+CREATE TABLE classes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_name VARCHAR(255) NOT NULL,
+    instructor_id INT,
+    location VARCHAR(100),
+    FOREIGN KEY (instructor_id) REFERENCES instructors(id)
+);
+
+CREATE TABLE class_enrollments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    rfid_uid VARCHAR(255) NOT NULL,
+    FOREIGN KEY (class_id) REFERENCES classes(id),
+    FOREIGN KEY (rfid_uid) REFERENCES users(rfid_uid)
+);
 ```
 
-#### Step 6: Configure Environment Variables
+---
 
-Create a `.env` file in the project's root directory:
+### 4. Configure the Backend
 
+Create `config.json` in the project root:
+
+```json
+{
+    "user": "root",
+    "password": "your_mysql_password",
+    "host": "127.0.0.1",
+    "database": "bttendance"
+}
 ```
-DB_HOST=localhost
-DB_USER=bttendance_user
-DB_PASSWORD=secure_password
-DB_NAME=bttendance
-FLASK_ENV=development
-FLASK_DEBUG=True
-```
 
-**Note:** Add `.env` to `.gitignore` to prevent committing sensitive credentials.
+> **Note:** `config.json` is in `.gitignore` — do not commit credentials.
 
-#### Step 7: Start Backend Server
+---
+
+### 5. Start the Backend Server
 
 ```bash
 python app.py
 ```
 
-Expected output:
-```
- * Running on http://127.0.0.1:5000
- * Debug mode: on
-```
+The server runs at `http://127.0.0.1:5000`. Open that URL in a browser to access the web dashboard.
 
 ---
 
-### Pico W Setup
+### 6. Set Up the Pico W
 
-#### Step 1: Install VS Code and Extensions
+#### Flash MicroPython Firmware
 
-1. Install Visual Studio Code: https://code.visualstudio.com/
-2. Install **Pico-W-Go** extension (by Professor Whatley)
-3. Install **Python** extension (by Microsoft)
+1. Download MicroPython firmware for Pico W: https://micropython.org/download/rp2-pico-w/
+2. Hold **BOOTSEL** on the Pico W while connecting via USB — it appears as `RPI-RP2` storage
+3. Drag the `.uf2` file onto the drive; the Pico W reboots automatically
 
-#### Step 2: Configure Application
+#### Install VS Code Extensions
 
-Edit `pico-w-code/config.py`:
+- **Pico-W-Go** (by Professor Whatley) — upload and run code on the Pico
+- **Python** (by Microsoft)
 
-```python
-WIFI_SSID = "your_wifi_network"
-WIFI_PASSWORD = "your_wifi_password"
-BACKEND_URL = "http://192.168.X.X:5000"  # Your computer's local IP
-LOCATION = "Classroom XYZ"
+#### Configure the Pico
+
+Edit `bttendance_pico/env.json`:
+
+```json
+{
+    "SERVER_IP": "192.168.X.X",
+    "SERVER_PORT": "5000",
+    "SSID": "your_wifi_network",
+    "PASSWORD": "your_wifi_password",
+    "LOCATION": "328"
+}
 ```
 
-Find your local IP address:
-- **Windows:** in a command prompt type `ipconfig` and look for "IPv4 Address"
+`SERVER_IP` is your computer's local IP address. Find it on Windows with `ipconfig` — look for "IPv4 Address".
 
-#### Step 3: Upload Code to Pico W
+#### Upload and Run
 
-1. Connect Pico W via USB
-2. Open `main.py` in VS Code
-3. Click **Run** in Pico-W-Go panel (Ctrl+Shift+F5)
-4. Code will upload automatically
+1. Connect the Pico W via USB
+2. Open `bttendance_pico/main.py` in VS Code
+3. Use the Pico-W-Go panel to upload and run (Ctrl+Shift+F5)
+4. Open the REPL to confirm WiFi connects and the RFID reader initializes
 
-#### Step 4: Verify Serial Output
+---
 
-1. Click **Repl** in Pico-W-Go panel
-2. Press reset button on Pico W
-3. Verify output shows WiFi connection and RFID initialization
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Serves the web dashboard |
+| `POST` | `/log-scan` | Log an RFID scan (called by Pico W) |
+| `GET` | `/get-user` | Get student info by RFID UID |
+| `GET` | `/get-all-users` | List all students |
+| `POST` | `/start-enrollment` | Begin RFID enrollment session |
+| `POST` | `/enroll-rfid` | Enroll a new RFID card |
+| `GET` | `/enrollment-stream` | SSE stream for enrollment status |
+| `DELETE` | `/delete-user` | Remove a student |
+| `GET/POST` | `/add-instructor` | List or add an instructor |
+| `DELETE` | `/delete-instructor` | Remove an instructor |
+| `GET/POST` | `/add-class` | List or add a class |
+| `DELETE` | `/delete-class` | Remove a class |
+| `GET` | `/get-class-enrollments` | Get students enrolled in a class |
+| `POST` | `/enroll-student` | Enroll a student in a class |
+| `GET` | `/get-attendance` | Query attendance records |
+| `GET` | `/get-analytics` | Attendance analytics |
+| `GET` | `/test` | Health check |
