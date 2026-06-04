@@ -205,7 +205,7 @@ Edit `bttendance_pico/env.json`:
     "SERVER_PORT": "5000",
     "SSID": "your_wifi_network",
     "PASSWORD": "your_wifi_password",
-    "LOCATION": "328"
+    "LOCATION": "your_classroom"
 }
 ```
 
